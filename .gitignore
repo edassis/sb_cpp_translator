@@ -1,6 +1,8 @@
 # Files
 teste*
 a.out
+montador
 
 # Folders
 bin/
+.vscode/
