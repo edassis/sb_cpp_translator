@@ -1,5 +1,7 @@
 # Files
 teste*
+*.PRE
+*.OBJ
 a.out
 montador
 

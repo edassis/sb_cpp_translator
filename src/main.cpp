@@ -5,6 +5,9 @@
 #include <vector>
 #include "tabela.h"
 
+#define LINE_LENGTH 256
+#define DELIMETERS " "
+
 using namespace std;
 
 int get_arguments(int argc, char **argv, string& option, string& sf) {
@@ -68,178 +71,159 @@ int get_arguments(int argc, char **argv, string& option, string& sf) {
     return ret;
 }
 
-void pre_process(FILE* in_file, FILE* out_file) {
-    enum class MajorState {Equ, Text, Data, None};
-    MajorState cur_major_state = MajorState::Equ;
-    bool change_section = false;
-    bool is_comment = false;
 
-    enum class EquState {Label, Comand, Number};
-    EquState cur_equ_state = EquState::Label;
-    
-    string token;
-    
-    string rotulo;
-    string comando;
-    int number;
-    map<string, int> tabela_equ;
+void pre_process(ifstream &in_file, ofstream &out_file) {
+    char line[LINE_LENGTH];
+    vector<string> token;
+    int line_count = 0;
 
-    enum class TextState {Check, Get, Skip};
-    TextState cur_text_state = TextState::Get;
-    bool is_if = false;
-    string equ_label = "";
-
-    int line_count = 1;
+    enum class MajorState {Equ, Text, Data, PassThrough};
+    MajorState currentMajorState = MajorState::Equ;
+    MajorState previousMajorState = currentMajorState;
     
-    char c;
-    do {
-        c = fgetc(in_file);
-        
-        if (isalpha(c) || c == ':') {  // letras
-            if (c >= 'a') {
-                c -= 'a' - 'A';
-                token += c;
+    enum class TextState {Get, Skip};
+    TextState currentTextState = TextState::Get;
+
+    map<string, int> equ_table;
+    string output_line;
+
+    while(!in_file.eof() && !in_file.bad()) {
+        if (currentMajorState == MajorState::PassThrough) {
+            currentMajorState = previousMajorState;
+        }
+        output_line.clear();
+
+        // Get line
+        in_file.getline(line, LINE_LENGTH);
+        line_count++;
+
+        // cout << line_count << ": " << line << endl;
+        // if (line[0] == '\0') {
+        //     currentMajorState = MajorState::PassThrough;
+        //     output_line = '\n';
+        // }
+
+        for (int i = 0; i < LINE_LENGTH; i++)  {
+            line[i] = toupper(line[i]);     // Uppercase
+            
+            if (line[i] == ';') {       // Removing coments
+                line[i] = '\0';
+                break;
+            }
+        }
+
+        // Tokenize
+        token.clear();
+        char *pch;
+        // if (token.empty())
+        //     pch = strtok(line, DELIMETERS);
+        // else
+        //     pch = strtok(NULL, DELIMETERS);
+        if (line[0] != '\0') {
+            pch = strtok(line, DELIMETERS);
+            if (pch == NULL) {
+                cout << "Erro! Nao foi possivel formar o token " << "(linha " << line_count << ")." << endl;
+                currentMajorState = MajorState::PassThrough;
+            }
+            while (pch != NULL) {
+                bool valid_token = true;
+                for (size_t i = 0; i < strlen(pch); i++) {
+                    // Check characters
+                    if(!isalnum(pch[i]) && pch[i] != ':' && pch[i] != '_' && pch[i] != ',') {
+                        cout << "Erro! Nao foi possivel formar o token " << "(linha " << line_count << ")." << endl;
+                        valid_token = false;
+                        break;
+                    }
+                }
+                if (valid_token)
+                    token.push_back(pch);
+                
+                pch = strtok(NULL, DELIMETERS);
+            }
+        }
+        // Major state transition
+        if (token.front() == "SECTION") {
+            if (token[1] == "TEXT" && token.size() == 2) {
+                currentMajorState = MajorState::Text;
+                previousMajorState = currentMajorState;
+                output_line = "SECTION TEXT\n";
+            }
+            else if (token[1] == "DATA" && token.size() == 2) {
+                currentMajorState = MajorState::Data;
+                previousMajorState = currentMajorState;
+                output_line = "SECTION DATA\n";
             }
             else {
-                token += c;
+                cout << "Erro! Secao invalida " << "(linha " << line_count << ")." << endl;
             }
+
+            currentMajorState = MajorState::PassThrough;
         }
-        else if (isdigit(c)) {   // numeros
-            token += c;
-        }
-        else if (c == ';') {
-            is_comment = true;
-        }
-        // else if (c == ';') {    // comments
-        //     while(c =fgetc(in_file), c != '\n' && c != EOF);
-        //     line_count++;
-        //     c = ' ';    // Force token analysis
-        // }
-        // else {
-        //     cout << "Erro! Token invalido! (linha " << line_count << ")." << endl;
-        // }
 
-        if ((isspace(c) || iscntrl(c) || is_comment) || c == EOF) {
-            if (!token.empty()) {
-                if (token == "SECTION") {
-                    cout << token << ' ';
-                    change_section = true;
-                    cur_major_state = MajorState::None;
-                }
-                if (change_section) {
-                    if (token == "TEXT") {
-                        cout << token << endl;
-                        cur_major_state = MajorState::Text;
-                        change_section = false;
-                        token.clear();
-                        continue;
-                    }   
-                    else if (token == "DATA") {
-                        cout << token << endl;
-                        cur_major_state = MajorState::Data;
-                        change_section = false;
-                        token.clear();
-                        continue;
-                    }
-                // else {
-                //     cout << "Erro! Diretiva invalida (linha " << line_count << ")." << endl;
-                // }
-                }
-            
-                if (cur_major_state == MajorState::Equ) {
-                    if (cur_equ_state == EquState::Label) {
-                        if (token.back() == ':') {  // rotulo
-                            token.pop_back();
-                            rotulo = token;
+        // States
+        if (currentMajorState == MajorState::Equ) {
+            if (!token.empty() && token.front().find(":") != string::npos) {
+                string label = token.front();
+                label.pop_back();
 
-                            cur_equ_state = EquState::Comand;
+                if (token[1] == "EQU" ) {       // Check command
+                    bool is_number = true;      // Check number
+                    for (char &c:token[2]) {
+                        if (!isdigit(c)) {
+                            is_number = false;
+                            break;
                         }
                     }
-                    else if (cur_equ_state == EquState::Comand) {
-                        if (token == "EQU") {
-                            comando = "EQU";
-                            cur_equ_state = EquState::Number;
-                        }
-                    }
-                    else if (cur_equ_state == EquState::Number) {
-                        if (token.front() >= '0' && token.front() <= '9') {     // numero
-                            number = stoi(token);
-                        }
+                    if(is_number) {
+                        int number = stoi(token[2]);
 
-                        map<string, int>::iterator it = tabela_equ.find(rotulo);
-                        if (it != tabela_equ.end()) {    // ja tem na tabela
-                            cout << "ERRO! tem na tabela" << endl;
-                            // gera erro
-                        }
-                        else {  // add na TS
-                            // cout << rotulo << " " << comando << " " << number << endl;
-                            tabela_equ.insert({rotulo, number});
-                        }
-
-                        cur_equ_state = EquState::Label;
-                    }
-                }
-            }
-            if (cur_major_state == MajorState::Text) {
-                if (cur_text_state == TextState::Get) {
-                    if (token == "IF") cur_text_state = TextState::Check;
-                    else if (!token.empty() && !is_comment)
-                        cout << token << " ";
-                    else if (is_comment || c == '\n')
-                        cout << endl;
-                }
-                else if (cur_text_state == TextState::Check) {
-                    if (tabela_equ.count(token) > 0) {
-                        int valor = tabela_equ[token];
-                        if (valor == 1) {
-                            cur_text_state = TextState::Get;
+                        if (equ_table.count(label) > 0) {
+                            cout << "Erro! Rotulo repetido " << "(linha " << line_count << ")." << endl;
                         }
                         else {
-                            cur_text_state = TextState::Skip;
+                            // cout << label << ' ' << number << endl;
+                            equ_table[label] = number;
                         }
                     }
+                }
+            }
+        }
+        else if (currentMajorState == MajorState::Text) {
+            if (token[0] == "IF") {
+                if (equ_table.count(token[1]) > 0) {    // Search equ label
+                    if (equ_table[token[1]] == 1) {
+                        currentTextState = TextState::Get;
+                    }
                     else {
-                        cout << "Erro! Declaracoes e rotulos ausentes (linha " << line_count << ")." << endl;
+                        currentTextState = TextState::Skip;
                     }
-                    //is_if = false;
-                }
-                else if (cur_text_state == TextState::Skip) {
-                    if (c != '\n' && c != EOF) {    // ainda n eh final de linha
-                        while(c = fgetc(in_file), c != '\n' && c != EOF);
-                        line_count++;
-                    }
-                    while(c = fgetc(in_file), c != '\n' && c != EOF);
-                    line_count++;
-
-                    cur_text_state = TextState::Get;
                 }
             }
-            else if (cur_major_state == MajorState::Data) {
-                if (!is_comment)
-                    cout << token << ' ';
-                
-                if (is_comment || c == '\n' || c == EOF)
-                    cout << '\n';
+            else if (currentTextState == TextState::Get) {
+                for (size_t i = 0; i < token.size(); i++) {
+                    output_line += token[i];
+                    if (i+1 < token.size()) output_line += ' ';
+                }
+                output_line += '\n';
             }
-            
-            token.clear();
+            else if (currentTextState == TextState::Skip) {
+                output_line.clear();
+                currentTextState = TextState::Get;
+            }
         }
-
-        if (is_comment) {     // jump comments
-            while(c = fgetc(in_file), c != '\n' && c != EOF);
-            is_comment = false;
+        else if (currentMajorState == MajorState::Data) {
+            for (size_t i = 0; i < token.size(); i++) {
+                output_line += token[i];
+                if (i+1 < token.size()) output_line += ' ';
+            }
+            output_line += '\n';
         }
-        if (c == '\n') {
-            line_count++;
-            // cout << endl;
-        }
-    } while (c != EOF);
-
-
-    for(auto e:tabela_equ) {
-        cout << e.first << " " << e.second << endl;
+        
+        if (!output_line.empty())
+            out_file << output_line;
     }
 }
+
 
 int main(int argc, char **argv) {
     string option;
@@ -251,9 +235,8 @@ int main(int argc, char **argv) {
     
     // key: rótulo, content: end. memória
     map<string, int> symbol_table;
-    FILE *in_file = fopen(sf.c_str(), "r");
-    
-    if (in_file == NULL) {
+    ifstream in_file(sf);
+    if (!in_file.is_open()) {
         cout << "Erro! Arquivo \"" << sf << "\" nao encontrado." << endl;
         return 0;
     }
@@ -263,13 +246,14 @@ int main(int argc, char **argv) {
         string out_file_name = sf.erase(found, sf.length());
         out_file_name += ".PRE";
 
-        FILE *out_file = fopen(out_file_name.c_str(), "w");
-        if (out_file == NULL) {
+        ofstream out_file(out_file_name);
+        if (!out_file.is_open()) {
             cout << "Erro ao criar arquivo: " << out_file_name << endl;
             return 0;
         }
         pre_process(in_file, out_file);
-        // cout << "Pre-processar" << endl;
+        in_file.close();
+        out_file.close();
     }
     else if (option == "-o") {
         cout << "Montar" << endl;
