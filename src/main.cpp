@@ -5,9 +5,16 @@
 // #include <iomanip>
 #include <string>
 #include <vector>
+#include <set>
 
 #include "tabela.h"
 #include "montador.h"
+
+const set<string> Parameters {
+    {"-p"},
+    {"-o"},
+    {"-op"}
+};
 
 using namespace std;
 
@@ -16,7 +23,7 @@ int get_arguments(int argc, char **argv, string &option, string &sf) {
 
     if (argc == 3) {  // flag and source file name
         for (int i = 1; i < argc; i++) {
-            if (option.empty() && (((string)argv[i]).compare("-p") == 0 || ((string)argv[i]).compare("-o") == 0)) {
+            if (option.empty() && Parameters.count((string)argv[i]) > 0) {
                 option = argv[i];
             } else if (sf.empty()) {
                 sf = argv[i];
@@ -26,9 +33,9 @@ int get_arguments(int argc, char **argv, string &option, string &sf) {
         if (!option.empty()) {
             string::size_type found;
 
-            if (option.compare("-p") == 0) {
+            if (option == "-p") {
                 found = sf.find(".asm");
-            } else if (option.compare("-o") == 0) {
+            } else if (option == "-o" || option == "-op") {
                 found = sf.find(".PRE");
             }
 
@@ -92,23 +99,27 @@ int main(int argc, char **argv) {
 
         out_file.open(out_file_name);
         if (!out_file.is_open()) {
-            cout << "Erro ao criar arquivo: " << out_file_name << endl;
+            cout << "Erro! Falha ao criar arquivo: " << out_file_name << endl;
             return 0;
         }
         pre_process(in_file, out_file);
-        cout << "Gerado arquivo \"" << out_file_name << "\"" << endl;
-    } else if (option == "-o") {
+        cout << "> Gerado arquivo \"" << out_file_name << "\"" << endl;
+    } else if (option == "-o" || option == "-op") {
         string::size_type found = sf.find(".PRE");
         string out_file_name = sf.erase(found, sf.length());
         out_file_name += ".OBJ";
 
         out_file.open(out_file_name);
         if (!out_file.is_open()) {
-            cout << "Erro ao criar arquivo: " << out_file_name << endl;
+            cout << "Erro! Falha ao criar arquivo: " << out_file_name << endl;
             return 0;
         }
-        compile(in_file, out_file);
-        cout << "Gerado arquivo \"" << out_file_name << "\"" << endl;
+        if (option == "-op") {
+            compile(in_file, out_file, 1);
+        } else {
+            compile(in_file, out_file);
+        }
+        cout << "> Gerado arquivo \"" << out_file_name << "\"" << endl;
     }
 
     in_file.close();

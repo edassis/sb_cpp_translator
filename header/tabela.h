@@ -17,7 +17,7 @@ enum InstType { Type1,
                 Type3 };
 
 struct Instruction {
-    int qtd_operands;
+    size_t qtd_operands;
     int opcode;
     int length;  // bytes
     
@@ -31,7 +31,7 @@ struct Instruction {
 };
 
 struct Diretive {
-    int qtd_operands;
+    size_t qtd_operands;
     int length;
 
     Diretive(int qtd_operands, int length) : qtd_operands(qtd_operands), length(length){};

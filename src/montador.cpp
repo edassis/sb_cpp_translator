@@ -11,7 +11,8 @@
 #include "tabela.h"
 
 #define LINE_LENGTH 256
-#define DELIMETERS " "
+#define DELIMETERS_PRE " \t"        // not validate params ("," stays)
+#define DELIMETERS_COMP " \t,"
 
 using namespace std;
 
@@ -112,7 +113,7 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
         char *pch;
 
         if (line[0] != '\0') {
-            pch = strtok(line, DELIMETERS);
+            pch = strtok(line, DELIMETERS_PRE);
             if (pch == NULL) {
                 cout << "Erro! Nao foi possivel formar o token "
                      << "(linha " << line_count << ")." << endl;
@@ -133,12 +134,12 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
                 if (valid_token)
                     token.push_back(pch);
 
-                pch = strtok(NULL, DELIMETERS);
+                pch = strtok(NULL, DELIMETERS_PRE);
             }
         }
 
         // Major state transition
-        if (token.front() == "SECTION") {
+        if (!token.empty() && token.front() == "SECTION") {
             if (token[1] == "TEXT" && token.size() == 2) {
                 currentMajorState = MajorState::Text;
                 previousMajorState = currentMajorState;
@@ -173,7 +174,7 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
                         int number = stoi(token[2]);
 
                         if (token.size() > 3) {
-                            cout << "Erro! Instrucoes com a quantidade de operando invalido"
+                            cout << "Erro! Instrucoes com a quantidade de operandos invalida"
                                  << "(linha " << line_count << ")." << endl;
                         } else if (equ_table.count(label) > 0) {
                             cout << "Erro! Rotulo repetido "
@@ -204,7 +205,7 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
                         currentTextState = TextState::Skip;
                     }
                 } else {
-                    cout << "Erro! Rotulo ausente "
+                    cout << "Erro! Parametro invalido "
                          << "(linha " << line_count << ")." << endl;
                 }
             } else if (currentTextState == TextState::Get) {  // Nao checa instrucoes em text
@@ -230,11 +231,13 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
     }
 }
 
-void compile(ifstream &in_file, ofstream &out_file) {
+void compile(ifstream &in_file, ofstream &out_file, int mode) {
     enum class MajorState { FirstPass,
-                            SecondPass };
+                            SecondPass,
+                            PassThrough };
     MajorState currentMajorState = MajorState::FirstPass;
-
+    MajorState previousMajorState = currentMajorState;
+    
     enum class Section { None,
                          Text,
                          Data };
@@ -269,11 +272,11 @@ void compile(ifstream &in_file, ofstream &out_file) {
             vector<string> token;
             char *pch;
             if (strlen(line) > 0) {
-                pch = strtok(line, " ,");
+                pch = strtok(line, DELIMETERS_COMP);
                 while (pch != NULL) {
                     token.push_back(pch);
 
-                    pch = strtok(NULL, " ,");
+                    pch = strtok(NULL, DELIMETERS_COMP);
                 }
             }
 
@@ -283,14 +286,36 @@ void compile(ifstream &in_file, ofstream &out_file) {
             vector<string> param;
 
             for (string &e : token) {
-                if (label.empty() && (e.find(":") != string::npos)) {
-                    label = e;
-                    label.pop_back();
-                } else if (command.empty() && (TI.count(e) > 0 || TD.count(e) > 0)) {
-                    command = e;
-                } else {
+                if (e.find(":") != string::npos) { // label
+                    if (label.empty()) {
+                        label = e;
+                        label.pop_back();
+                    } else if (currentMajorState == MajorState::SecondPass) {   // show errors one time only
+                        cout << "Erro! Mais de um rotulo na mesma linha "
+                             << "(linha " << line_count << ")." << endl;
+                    }
+                } else if (TI.count(e) > 0) { // instruction
+                    if (command.empty()) {
+                        command = e;
+                    } else if (currentMajorState == MajorState::SecondPass) {
+                        cout << "Erro! Declaracao repetida "
+                             << "(linha " << line_count << ")." << endl;
+                    }
+                } else if (TD.count(e) > 0) {  // directive
+                    if (command.empty()) {
+                        command = e;
+                    } else if (currentMajorState == MajorState::SecondPass) {
+                        cout << "Erro! Declaracao repetida "
+                             << "(linha " << line_count << ")." << endl;
+                    }
+                } else {    // parameters isn't checked
                     param.push_back(e);
                 }
+            }
+
+            // Empty line (\n)
+            if (token.empty()) {
+                currentMajorState = MajorState::PassThrough;
             }
 
             // Check section
@@ -305,11 +330,12 @@ void compile(ifstream &in_file, ofstream &out_file) {
                          << "(linha " << line_count << ")." << endl;
                 }
 
-                command.clear();
-                param.clear();
+                // command.clear();
+                // param.clear();
+                currentMajorState = MajorState::PassThrough;
             }
 
-            if (currentMajorState == MajorState::FirstPass) {  // make TS
+            if (currentMajorState == MajorState::FirstPass) {  // make TS, check labels and directives
                 if (currentSection == Section::Text) {
                     if (!label.empty()) {
                         if (TS.count(label) == 0) {
@@ -325,15 +351,28 @@ void compile(ifstream &in_file, ofstream &out_file) {
                             if (command == "SPACE") {
                                 TS[label] = end_count;
                                 data_table[end_count] = 0;
+
+                                if (!param.empty()) {  // SPACE n tem param
+                                    cout << "Erro! Diretiva com a quantidade de operandos invalida "
+                                         << "(linha " << line_count << ")." << endl;
+                                }
                             } else if (command == "CONST") {
                                 TS[label] = end_count;
 
-                                if (!param.empty() && is_number(param.front())) {
-                                    data_table[end_count] = stoi(param.front());
+                                if (param.size() == TD.at(command).qtd_operands) {  // check qtd de param
+                                    if (is_number(param.front())) {                 // param eh numero?
+                                        data_table[end_count] = stoi(param.front());
+                                    } else {
+                                        cout << "Erro! Diretiva com p tipo de operandos invalido "
+                                             << "(linha " << line_count << ")." << endl;
+                                    }
                                 } else {
-                                    cout << "Erro! Diretiva com operando invalido "
+                                    cout << "Erro! Diretiva com a quantidade de operandos invalida "
                                          << "(linha " << line_count << ")." << endl;
                                 }
+                            } else {
+                                cout << "Erro! Diretiva invalida "
+                                     << "(linha " << line_count << ")." << endl;
                             }
                         } else {
                             cout << "Erro! Rotulo repetido "
@@ -341,48 +380,64 @@ void compile(ifstream &in_file, ofstream &out_file) {
                         }
 
                     } else if (command != "SECTION") {  // n eh transicao
-                        if (!command.empty() && TD.count(command) > 0) {
-                            cout << "Erro! Diretiva na secao errada "
-                                 << "(linha " << line_count << ")." << endl;
-                        } else if (!command.empty()) {
-                            cout << "Erro! Diretiva invalida "
-                                 << "(linha " << line_count << ")." << endl;
-                        }
+                        cout << "Erro! Rotulo ausente "
+                             << "(linha " << line_count << ")." << endl;
+                        // if (!command.empty()) {
+                        //     if (TD.count(command) > 0) {
+                        //         cout << "Erro! Diretiva invalida "
+                        //             << "(linha " << line_count << ")." << endl;
+                        //     }
+                        // } else if (!command.empty()) {
+                        //     cout << "Erro! Diretiva invalida "
+                        //          << "(linha " << line_count << ")." << endl;
+                        // }
                     }
                 } else if (!command.empty() && command != "SECTION") {  // sem rotulo e n eh transicao
-                    cout << "Erro! Rotulo ausente "
+                    cout << "Erro! Diretiva ou instrucao na secao errada "
                          << "(linha " << line_count << ")." << endl;
+                    // cout << "Erro! Rotulo ausente "
+                    //      << "(linha " << line_count << ")." << endl;
                 }
-            } else if (currentMajorState == MajorState::SecondPass) {  // generate obj code
-                if (currentSection == Section::Text) {
+            } else if (currentMajorState == MajorState::SecondPass) {  // generate obj code, check instr's params, check labels on TS
+                if (currentSection == Section::Text) {                  
                     if (!command.empty()) {
                         if (TI.count(command) > 0) {
                             Instruction instr = TI.at(command);
                             // vector<int> endr_param;
 
-                            if (instr.qtd_operands) {
-                                if (!param.empty()) {
-                                    for (string &e : param) {
-                                        if (TS.count(e) > 0) {
-                                            instr.operands.push_back(TS[e]);
+                            if (instr.qtd_operands == param.size()) {
+                                if (instr.qtd_operands > 0) {   // have param
+                                    bool valid_param = true;
+                                    for (size_t i = 0; i < instr.qtd_operands; i++) {   // check param on TS
+                                        if (TS.count(param[i]) > 0) {
+                                            instr.operands.push_back(TS[param[i]]);
                                         } else {
-                                            cout << "Erro! Rotulo ausente "
+                                            cout << "Erro! Parametro invalido "
                                                  << "(linha " << line_count << ")." << endl;
+                                            valid_param = false;
                                         }
                                     }
-                                    if (!instr.operands.empty())
+                                    if (valid_param)
                                         text_table.push_back(instr);
                                 } else {
-                                    cout << "Erro! Parametro invalido "
-                                         << "(linha " << line_count << ")." << endl;
+                                    text_table.push_back(instr);
+                                    // cout << "Erro! Instrucao com a quantidade de operandos incorreta "
+                                    //      << "(linha " << line_count << ")." << endl;
                                 }
-                            } else {    // instruction without operands
-                                text_table.push_back(instr);
+                            } else {
+                                cout << "Erro! Instrucao com a quantidade de operandos incorreta "
+                                     << "(linha " << line_count << ")." << endl;
                             }
+                        } else if (TD.count(command) > 0) {    // (occurs if command is a directive)
+                            cout << "Erro! Diretiva na secao errada "
+                                 << "(linha " << line_count << ")." << endl;
                         } else {
                             cout << "Erro! Instrucao invalida "
                                  << "(linha " << line_count << ")." << endl;
                         }
+                    } else {
+                        cout << "Erro! Declaracao ausente "
+                             << "(linha " << line_count << ")." << endl;
                     }
                 }
             }
@@ -393,10 +448,17 @@ void compile(ifstream &in_file, ofstream &out_file) {
             } else if (TD.count(command) > 0) {
                 end_count += TD.at(command).length;
             }
+
+            // Recovering state
+            if (currentMajorState == MajorState::PassThrough ) {
+                currentMajorState = previousMajorState;
+            }
         }
 
         if (currentMajorState == MajorState::FirstPass) {
             currentMajorState = MajorState::SecondPass;  // second pass
+            previousMajorState = currentMajorState;
+            
             currentSection = Section::None;
 
             in_file.clear();
@@ -406,8 +468,8 @@ void compile(ifstream &in_file, ofstream &out_file) {
             end_count = 0;
 
             if (!found_text) {
-                cout << "Erro! secao TEXT faltando." << endl;
-                cout << "Compilacao interrompida." << endl;
+                cout << "Erro! Secao TEXT faltando." << endl;
+                cout << "> Compilacao interrompida." << endl;
                 stop = true;
             }
         } else {
@@ -417,5 +479,10 @@ void compile(ifstream &in_file, ofstream &out_file) {
 
     // write on output file
     // _obj_one_line(out_file, text_table, data_table, TS);
-    _obj_pretty(out_file, text_table, data_table, TS);
+
+    if (mode == 1) {
+        _obj_pretty(out_file, text_table, data_table, TS);
+    } else {
+        _obj_one_line(out_file, text_table, data_table, TS);
+    }
 }

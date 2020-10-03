@@ -5,7 +5,7 @@
 
 void pre_process(ifstream &in_file, ofstream &out_file);
 
-void compile(ifstream &in_file, ofstream &out_file);
+void compile(ifstream &in_file, ofstream &out_file, int mode = 0);
 
 int is_number(string &s);
 
