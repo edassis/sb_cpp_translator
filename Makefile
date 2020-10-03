@@ -1,10 +1,30 @@
 ############################# Makefile ##########################
-all: main
-main:
-	g++ -std=c++11 -Wall -g -I header -o montador src/main.cpp
+CXX := g++
+CXXFLAGS := -Wall -g -std=c++11
+SRC_DIR := src
+OBJ_DIR := obj
+SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+# You can also do it like that
+# OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
+INCLUDE := -I header/
+TARGET := montador
+
+.PHONY: all clean
+
+all: $(TARGET) msg
+
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+
+$(OBJ_DIR):
+	mkdir -p $@
 
 clean:
-	rm -rf *.o montador
+	@$(RM) -rv $(OBJ_DIR) $(TARGET)
 
-exec:
-	./montador -p equ.asm
+msg:
+	@echo "> \"./montador\" to execute"

@@ -1,7 +1,8 @@
-#ifndef _TABELA_H_
-#define _TABELA_H_
+#ifndef TABELA_H
+#define TABELA_H
 
 #include <map>
+#include <vector>
 
 using namespace std;
 
@@ -16,15 +17,15 @@ enum InstType { Type1,
                 Type3 };
 
 struct Instruction {
-    string name;
-    int opcode;
     int qtd_operands;
+    int opcode;
     int length;  // bytes
+    
+    vector<int> operands;
 
-    Instruction(string name, int opcode, int qtd_operands, int length) {
-        this->name = name;
-        this->opcode = opcode;
+    Instruction(int qtd_operands, int opcode, int length) {
         this->qtd_operands = qtd_operands;
+        this->opcode = opcode;
         this->length = length;
     }
 };
@@ -40,37 +41,40 @@ struct Diretive {
  * @brief Tabela de Instruções
  * 
  */
-struct TI {
-    Instruction ADD, SUB, MULT, DIV;
-    Instruction JMP, JMPN, JMPP, JMPZ;
-    Instruction COPY, LOAD, STORE;
-    Instruction INPUT, OUTPUT, STOP;
+const map<string, Instruction> TI {
+    {"ADD", Instruction(1, 1, 2)},
+    {"SUB", Instruction(1, 2, 2)},
+    {"MULT", Instruction(1, 3, 2)},
+    {"DIV", Instruction(1, 4, 2)},
 
-    TI() :  ADD("ADD", 1, 1, 2), SUB("SUB", 1, 2, 2), MULT("MULT", 1, 3, 2), DIV("DIV", 1, 4, 2),
-            JMP("JMP", 1, 5, 2), JMPN("JMPN", 1, 6, 2), JMPP("JMPP", 1, 7, 2), JMPZ("JMPZ", 1, 8, 2),
-            COPY("COPY", 2, 9, 3), LOAD("LOAD", 1, 10, 2), STORE("STORE", 1, 11, 2), INPUT("INPUT", 1, 12, 2), OUTPUT("OUTPUT", 1, 13, 2),
-            STOP("STOP", 0, 14, 1) {}
+    {"JMP", Instruction(1, 5, 2)},
+    {"JMPN", Instruction(1, 6, 2)},
+    {"JMPP", Instruction(1, 7, 2)},
+    {"JMPZ", Instruction(1, 8, 2)},
+
+    {"COPY", Instruction(2, 9, 3)},
+    {"LOAD", Instruction(1, 10, 2)},
+    {"STORE", Instruction(1, 11, 2)},
+    {"INPUT", Instruction(1, 12, 2)},
+    {"OUTPUT", Instruction(1, 13, 2)},
+
+    {"STOP", Instruction(0, 14, 1)},
 };
+
 
 /**
  * @brief Tabela de Diretivas
  * 
  */
-// struct TD {
-//     Diretive SECTION, SPACE, CONST, EQU, IF, MACRO, ENDMACRO; 
-//     TD() : SECTION(1, 0), SPACE(0, 1), CONST(1, 1), EQU(1, 0), IF(1, 0), MACRO(0, 0), ENDMACRO(0, 0) {} 
-// };
-
 const map<string, Diretive> TD {
+    {"EQU", Diretive(1,0)},         // at the beginning
     {"SECTION", Diretive(1,0)},
-    {"SPACE", Diretive(0,1)},
-    {"CONST", Diretive(1,1)},
-    {"EQU", Diretive(1,0)},
-    {"IF", Diretive(1,0)},
-    {"MACRO", Diretive(0,0)},
-    {"ENDMACRO", Diretive(0,0)}
+    {"MACRO", Diretive(0,0)},       // TEXT
+    {"ENDMACRO", Diretive(0,0)},
+    {"IF", Diretive(1,0)},          // TEXT
+    {"SPACE", Diretive(0,1)},       // DATA
+    {"CONST", Diretive(1,1)}        // DATA
 };
 
-map<string, int> TS;
-
+// map<string, int> TS;
 #endif
