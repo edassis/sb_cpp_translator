@@ -1,7 +1,11 @@
+;primeiro comentario
+
+
 SECTION TEXT
 INPUT OLD_DATA
 LOAD OLD_DATA
-L1: DIV DOIS        ;dfadsfasd
+L1: ; comentario no meio da instrucao
+DIV DOIS        ;dfadsfasd
 STORE  NEW_DATA ;fasdfasdfas
 MULT DOIS
 STORE TMP_DATA ;;;
@@ -10,7 +14,7 @@ SUB TMP_DATA
 STORE TMP_DAT@A
 OUTPUT TMP_DATA dfsfa
 COPY NEW_DATA,    OLD_DATA
-LOAD OLD_DATA
+LOAD		OLD_DATA ; tab indentation
 JMPP L1
 dasd
 STOP

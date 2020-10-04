@@ -127,26 +127,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-
-// Pegar parametros do terminal
-// Argumentos:
-// -p : pre-processa, saida <nome>.PRE
-// -o : monta, saida <nome>.OBJ (requere arquivo .PRE)
-
-// Não checa se é um comando valido em TEXT, DATA
-// Remove comentarios
-// Remove palavras com caracters invalidos
-// Aplica diretiva EQU
-
-//OBS
-// Assumir que o EQU sempre vai vir no inicio do programa e fora das se¸c˜oes de
-// Texto e Dados. Lembrar que pode ter EQU sem IF, mas assumir que IF sempre precisa
-// de uma declara¸c˜ao de EQU anteior
-
-// Por exemplo, foi especificado que o COPY deve receber
-// operando separados por v´ırgula e SEM espa¸co entre os operandos.
-
-// No casso da diretiva SPACE deve ser colocado o valor OO no arquivo objeto (n˜ao colocar XX).
-
-// Analisar proxima linha para formar o token (rotulo)
-// Especificar tipo de erro LEXICO, SINTATICO, SEMANTICO

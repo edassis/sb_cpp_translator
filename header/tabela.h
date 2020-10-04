@@ -19,6 +19,13 @@ struct RawInstruction {
     string instr_name;
     vector<string> operands;
 
+    RawInstruction() {
+        type = InstType::Type1;
+        label = "";
+        instr_name = "";
+        operands.clear();
+    }
+    
     void clear() {
         type = InstType::Type1;
         instr_name.clear();
