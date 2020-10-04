@@ -76,6 +76,7 @@ bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
     bool is_comment = false;
     string label;
     string command;
+    int command_line = 0;
     vector<string> operands;
     InstType instr_type;
 
@@ -85,31 +86,28 @@ bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
         char c;
         in_file.get(c);
 
-        if (c == '\n') {
-            is_comment = false;
-            line++;
-        } else if (c == ';') {  // skipping commments
+        if (c == ';') {  // skipping commments
             is_comment = true;
         }
 
         if (!is_comment) {
             if (c != '\n' && c != '\t' && c != ' ' && !in_file.eof()) {  // building token
                 token.push_back(toupper(c));
-            } else {  // formed token
-                // checking token formation
-                for (size_t i = 0; i < token.size(); i++) {
+            } else {                                         // formed token
+                for (size_t i = 0; i < token.size(); i++) {  // checking token
                     if (!isalnum(token[i]) && token[i] != '_' && token[i] != ',' && token[i] != ':') {
                         cout << "Erro LEXICO! Token invalido \"" << token << "\" "
-                            << "(linha " << line << ")." << endl;
-                        label.clear();      // invalidate all previous informations
+                             << "(linha " << line << ")." << endl;
+
+                        label.clear();  // invalidate all previous informations
                         command.clear();
                         operands.clear();
-                        
+
                         token.clear();
                         break;
                     }
                 }
-                
+
                 // valid token
                 if (!token.empty()) {
                     if (token.find(":") != string::npos) {
@@ -120,26 +118,28 @@ bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                             cout << "Erro SINTATICO! Mais de um rotulo por instrucao/diretiva "
                                  << "(linha " << line << ")." << endl;
                         }
-                        // Need to know if is TI/TD to properly get operands (etc) of instr
-                        // since '\n' isn't useful to mark the beginning of a new instr.
                     }
-                    else if (command.empty()) {
-                        if (TI.count(token) > 0) {
-                            command = token;
-                            instr_type = InstType::Type1;
-                        } else if (TD.count(token) > 0) {
-                            command = token;
-                            instr_type = InstType::Type2;
-                        } else {
-                            cout << "Erro SINTATICO! Instrucao/Diretiva \"" << token << "\" invalida "
-                                 << "(linha " << line << ")." << endl;
+                    // Need to know if is TI/TD to properly get operands (etc) of instr
+                    // since '\n' isn't useful to mark the beginning of a new instr.
+                    else if (TI.count(token) > 0) {
+                        if (!command.empty()) {  // already has assigned command
+                            cout << "Erro SINTATICO! Instrucao com a quantidade de operandos invalida "
+                                 << "(linha " << command_line << ")." << endl;
                         }
-                        // if (command.empty()) {
-                        //     command = token;
-                        //     instr_type = InstType::Type1;
-                        // }
-                    }
-                    else {                                    // pode ser parametros
+                        command = token;
+                        command_line = line;
+                        instr_type = InstType::Type1;
+                        operands.clear();
+                    } else if (TD.count(token) > 0) {
+                        if (!command.empty()) {  // already has assigned command
+                            cout << "Erro SINTATICO! Diretiva com a quantidade de operandos invalida "
+                                 << "(linha " << command_line << ")." << endl;
+                        }
+                        command = token;
+                        command_line = line;
+                        instr_type = InstType::Type2;
+                        operands.clear();
+                    } else if (!command.empty()) {            // pode ser parametros
                         if (instr_type == InstType::Type1) {  // instrucao
                             if (TI.at(command).qtd_operands > operands.size()) {
                                 operands.push_back(token);
@@ -155,11 +155,20 @@ bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                                      << "(linha " << line << ")." << endl;
                             }
                         }
+                    } else {
+                        cout << "Erro SINTATICO! Diretiva/Instrucao invalida \"" << token << "\" "
+                             << "(linha " << line << ")." << endl;
                     }
 
                     token.clear();
                 }
             }
+        }
+
+        // new line
+        if (c == '\n') {
+            is_comment = false;
+            line++;
         }
 
         // Constructing instr
@@ -191,7 +200,7 @@ bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
 
 void pre_process(ifstream &in_file, ofstream &out_file) {
     RawInstruction raw_instr;
-    int line_count = 0;
+    int line_count = 1;
 
     map<string, int> equ_table;
 
@@ -218,7 +227,7 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
                     // add \n on state transition
                     out_file << endl;
                 } else {
-                    cout << "Erro SINTATICO! Secao invalida "
+                    cout << "Erro SINTATICO! Secao invalida \"" << raw_instr.operands.front() << "\" "
                          << "(linha " << line_count << ")." << endl;
                 }
             }
@@ -233,7 +242,7 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
                                  << "(linha " << line_count << ")." << endl;
                         }
                     } else {
-                        cout << "Erro SEMANTICO! Rotulo repetido "
+                        cout << "Erro SEMANTICO! Rotulo repetido \"" << raw_instr.label << "\" "
                              << "(linha " << line_count << ")." << endl;
                     }
                 }
@@ -244,6 +253,7 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
                             currentTextState = TextState::Pass;
                         }
                     } else {  // didnt find correspondent label
+                        currentTextState = TextState::Pass;
                         cout << "Erro SEMANTICO! Declaracao ausente "
                              << "(linha " << line_count << ")." << endl;
                     }
@@ -322,7 +332,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                     if (label.empty()) {
                         label = e;
                         label.pop_back();
-                    } /* else if (currentMajorState == MajorState::SecondPass) {  // show errors one time only
+                    }                          /* else if (currentMajorState == MajorState::SecondPass) {  // show errors one time only
                         cout << "Erro! Mais de um rotulo na mesma linha "
                              << "(linha " << line_count << ")." << endl;
                     } */
@@ -330,14 +340,14 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                     if (command.empty()) {
                         command = e;
                     } else if (currentMajorState == MajorState::SecondPass) {
-                        cout << "Erro SINTATICO! Instrucao/Diretiva com tipo de operando invalido "
+                        cout << "Erro SINTATICO! Instrucao com tipo de operando invalido "
                              << "(linha " << line_count << ")." << endl;
                     }
                 } else if (TD.count(e) > 0) {  // directive
                     if (command.empty()) {
                         command = e;
                     } else if (currentMajorState == MajorState::SecondPass) {
-                        cout << "Erro SINTATICO! Instrucao/Diretiva com tipo de operando invalido "
+                        cout << "Erro SINTATICO! Diretiva com tipo de operando invalido "
                              << "(linha " << line_count << ")." << endl;
                     }
                 } else {  // parameters isn't checked
@@ -357,7 +367,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                     currentSection = Section::Text;
                 } else if (param.front() == "DATA") {
                     currentSection = Section::Data;
-                }/*  else {
+                } /*  else {
                     cout << "Erro SINTATICO! Secao invalida "
                          << "(linha " << line_count << ")." << endl;
                 } */
@@ -401,11 +411,11 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                                          << "(linha " << line_count << ")." << endl;
                                 }
                             } else {
-                                cout << "Erro SINTATICO! Diretiva invalida "
+                                cout << "Erro SINTATICO! Diretiva invalida \"" << command << "\" "
                                      << "(linha " << line_count << ")." << endl;
                             }
                         } else {
-                            cout << "Erro SEMANTICO! Rotulo repetido "
+                            cout << "Erro SEMANTICO! Rotulo repetido \"" << label << "\" "
                                  << "(linha " << line_count << ")." << endl;
                         }
 
@@ -414,7 +424,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                              << "(linha " << line_count << ")." << endl;
                     }
                 } else if (!command.empty() && command != "SECTION") {  // sem rotulo e n eh transicao
-                    cout << "Erro SEMANTICO! Diretiva/Instrucao na secao errada "
+                    cout << "Erro SEMANTICO! Diretiva/Instrucao na secao errada \"" << command << "\" "
                          << "(linha " << line_count << ")." << endl;
                 }
             } else if (currentMajorState == MajorState::SecondPass) {  // generate obj code, check instr's params, check labels on TS
@@ -430,8 +440,13 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                                         if (TS.count(param[i]) > 0) {
                                             instr.operands.push_back(TS[param[i]]);
                                         } else {
-                                            cout << "Erro SINTATICO! Parametro invalido "
-                                                 << "(linha " << line_count << ")." << endl;
+                                            if (is_number(param[i])) {  // number
+                                                cout << "Erro SINTATICO! Parametro invalido \"" << param[i] << "\" "
+                                                     << "(linha " << line_count << ")." << endl;
+                                            } else {  // name
+                                                cout << "Erro SEMANTICO! Rotulo ausente "
+                                                     << "(linha " << line_count << ")." << endl;
+                                            }
                                             valid_param = false;
                                         }
                                     }
@@ -448,7 +463,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                             cout << "Erro SEMANTICO! Diretiva na secao errada "
                                  << "(linha " << line_count << ")." << endl;
                         } else {
-                            cout << "Erro SINTATICO! Instrucao invalida "
+                            cout << "Erro SINTATICO! Instrucao invalida \"" << command << "\" "
                                  << "(linha " << line_count << ")." << endl;
                         }
                     } else {

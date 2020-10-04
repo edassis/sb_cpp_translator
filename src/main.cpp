@@ -3,18 +3,17 @@
 #include <fstream>
 #include <iostream>
 // #include <iomanip>
+#include <set>
 #include <string>
 #include <vector>
-#include <set>
 
-#include "tabela.h"
 #include "montador.h"
+#include "tabela.h"
 
-const set<string> Parameters {
+const set<string> Parameters{
     {"-p"},
     {"-o"},
-    {"-op"}
-};
+    {"-op"}};
 
 using namespace std;
 
