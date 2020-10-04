@@ -11,12 +11,12 @@
 #include "tabela.h"
 
 #define LINE_LENGTH 256
-#define DELIMETERS_PRE " \t"        // not validate params ("," stays)
+#define DELIMETERS_PRE " \t"  // not validate params ("," stays)
 #define DELIMETERS_COMP " \t,"
 
 using namespace std;
 
-int is_number(string &s) {
+bool is_number(string &s) {
     bool is_number = true;
     for (size_t i = 0; i < s.length(); i++) {
         if (!isdigit(s[i])) {
@@ -66,6 +66,172 @@ void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, map<int, in
             out_file << setw(10) << left << end << setw(6) << right << data_table[e.second] << endl;
             ;
             end_counter++;
+        }
+    }
+}
+
+bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
+    // RawInstruction instr;
+    bool complete_instr = false;
+    bool is_comment = false;
+    string label;
+    string command;
+    vector<string> operands;
+    InstType instr_type;
+
+    vector<string> tokens;
+    string token;
+    while (!complete_instr && !in_file.eof() && !in_file.bad()) {
+        char c;
+        in_file.get(c);
+
+        if (c == '\n') {
+            is_comment = false;
+            line++;
+        } else if (c == ';') {  // skipping commments
+            is_comment = true;
+        }
+
+        if (!is_comment) {
+            if ((isalnum(c) || c == '_' || c == ':' || c == ',')) {  // building token
+                token.push_back(toupper(c));
+            } else if (!token.empty()) {  // formed token
+                if (token.find(":") != string::npos) {
+                    if (label.empty()) {
+                        label = token;
+                        label.pop_back();
+                    }
+                } else if ((TI.count(token) > 0) && command.empty()) {
+                    command = token;
+                    instr_type = InstType::Type1;
+                    // if (command.empty()) {
+                    //     command = token;
+                    //     instr_type = InstType::Type1;
+                    // }
+                } else if ((TD.count(token) > 0) && command.empty()) {
+                    command = token;
+                    instr_type = InstType::Type2;
+                    // if (command.empty()) {
+                    //     command = token;
+                    //     instr_type = InstType::Type2;
+                    // }
+                } else if (!command.empty()) {            // pode ser parametros
+                    if (instr_type == InstType::Type1) {  // instrucao
+                        if (TI.at(command).qtd_operands > operands.size()) {
+                            operands.push_back(token);
+                        }
+                    } else if (instr_type == InstType::Type2) {  // diretiva
+                        if (TD.at(command).qtd_operands > operands.size()) {
+                            operands.push_back(token);
+                        }
+                    }
+                }
+
+                token.clear();
+            }
+        }
+
+        if (!command.empty()) {
+            if (instr_type == InstType::Type1) {
+                if (operands.size() == TI.at(command).qtd_operands) {
+                    complete_instr = true;
+
+                    raw_instr.type = instr_type;
+                    raw_instr.label = label;
+                    raw_instr.instr_name = command;
+                    raw_instr.operands = operands;
+                }
+            } else if (instr_type == InstType::Type2) {
+                if (operands.size() == TD.at(command).qtd_operands) {
+                    complete_instr = true;
+
+                    raw_instr.type = instr_type;
+                    raw_instr.label = label;
+                    raw_instr.instr_name = command;
+                    raw_instr.operands = operands;
+                }
+            }
+        }
+    }
+
+    return complete_instr;
+}
+
+void pre_process2(ifstream &in_file, ofstream &out_file) {
+    RawInstruction raw_instr;
+    int line_count = 1;
+
+    map<string, int> equ_table;
+
+    enum class MajorState { Equ,
+                            Text,
+                            Data,
+                            PassThrough };
+    MajorState currentMajorState = MajorState::Equ;
+    // MajorState previousMajorState = currentMajorState;
+
+    enum class TextState { Get,
+                           Pass };
+    TextState currentTextState = TextState::Get;
+
+    while (!in_file.eof() && !in_file.bad()) {
+        raw_instr.clear();
+        if (_get_instr(in_file, raw_instr, line_count)) {
+            // check state
+            // add \n on state transition
+            if (raw_instr.instr_name == "SECTION") {
+                if (raw_instr.operands.front() == "TEXT") {
+                    currentMajorState = MajorState::Text;
+                } else if (raw_instr.operands.front() == "DATA") {
+                    currentMajorState = MajorState::Data;
+                    out_file << endl;
+                }
+            }
+
+            if (currentMajorState == MajorState::Equ) {
+                if (raw_instr.instr_name == "EQU") {
+                    if (equ_table.count(raw_instr.label) == 0) {
+                        if (is_number(raw_instr.operands.front())) {
+                            equ_table[raw_instr.label] = stoi(raw_instr.operands.front());
+                        } else {
+                            cout << "Erro! Parametro invalido "
+                                 << "(linha " << line_count << ")." << endl;
+                        }
+                    } else {
+                        cout << "Erro! Rotulo repetido "
+                             << "(linha " << line_count << ")." << endl;
+                    }
+                }
+            } else if (currentMajorState == MajorState::Text) {
+                if (raw_instr.instr_name == "IF") {
+                    if (equ_table.count(raw_instr.operands.front()) > 0) {  // check param(label) on equ_table
+                        if (equ_table.at(raw_instr.operands.front()) != 1) {
+                            currentTextState = TextState::Pass;
+                        }
+                    } else {
+                        cout << "Erro! Parametro invalido "
+                             << "(linha " << line_count << ")." << endl;
+                    }
+                } else if (currentTextState == TextState::Get) {
+                    if (!raw_instr.label.empty()) {
+                        out_file << raw_instr.label << ": " << raw_instr.instr_name << ' ';
+                    } else {
+                        out_file << raw_instr.instr_name << ' ';
+                    }
+                    for (auto &e : raw_instr.operands) out_file << e << ' ';
+                    out_file << '\n';
+                } else if (currentTextState == TextState::Pass) {
+                    currentTextState = TextState::Get;
+                }
+            } else if (currentMajorState == MajorState::Data) {
+                if (!raw_instr.label.empty()) {
+                    out_file << raw_instr.label << ": " << raw_instr.instr_name << ' ';
+                } else {
+                    out_file << raw_instr.instr_name << ' ';
+                }
+                for (auto &e : raw_instr.operands) out_file << e << ' ';
+                out_file << '\n';
+            }
         }
     }
 }
@@ -237,7 +403,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                             PassThrough };
     MajorState currentMajorState = MajorState::FirstPass;
     MajorState previousMajorState = currentMajorState;
-    
+
     enum class Section { None,
                          Text,
                          Data };
@@ -286,15 +452,15 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
             vector<string> param;
 
             for (string &e : token) {
-                if (e.find(":") != string::npos) { // label
+                if (e.find(":") != string::npos) {  // label
                     if (label.empty()) {
                         label = e;
                         label.pop_back();
-                    } else if (currentMajorState == MajorState::SecondPass) {   // show errors one time only
+                    } else if (currentMajorState == MajorState::SecondPass) {  // show errors one time only
                         cout << "Erro! Mais de um rotulo na mesma linha "
                              << "(linha " << line_count << ")." << endl;
                     }
-                } else if (TI.count(e) > 0) { // instruction
+                } else if (TI.count(e) > 0) {  // instruction
                     if (command.empty()) {
                         command = e;
                     } else if (currentMajorState == MajorState::SecondPass) {
@@ -308,7 +474,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                         cout << "Erro! Declaracao repetida "
                              << "(linha " << line_count << ")." << endl;
                     }
-                } else {    // parameters isn't checked
+                } else {  // parameters isn't checked
                     param.push_back(e);
                 }
             }
@@ -399,16 +565,16 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                     //      << "(linha " << line_count << ")." << endl;
                 }
             } else if (currentMajorState == MajorState::SecondPass) {  // generate obj code, check instr's params, check labels on TS
-                if (currentSection == Section::Text) {                  
+                if (currentSection == Section::Text) {
                     if (!command.empty()) {
                         if (TI.count(command) > 0) {
                             Instruction instr = TI.at(command);
                             // vector<int> endr_param;
 
                             if (instr.qtd_operands == param.size()) {
-                                if (instr.qtd_operands > 0) {   // have param
+                                if (instr.qtd_operands > 0) {  // have param
                                     bool valid_param = true;
-                                    for (size_t i = 0; i < instr.qtd_operands; i++) {   // check param on TS
+                                    for (size_t i = 0; i < instr.qtd_operands; i++) {  // check param on TS
                                         if (TS.count(param[i]) > 0) {
                                             instr.operands.push_back(TS[param[i]]);
                                         } else {
@@ -428,7 +594,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                                 cout << "Erro! Instrucao com a quantidade de operandos incorreta "
                                      << "(linha " << line_count << ")." << endl;
                             }
-                        } else if (TD.count(command) > 0) {    // (occurs if command is a directive)
+                        } else if (TD.count(command) > 0) {  // (occurs if command is a directive)
                             cout << "Erro! Diretiva na secao errada "
                                  << "(linha " << line_count << ")." << endl;
                         } else {
@@ -450,7 +616,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
             }
 
             // Recovering state
-            if (currentMajorState == MajorState::PassThrough ) {
+            if (currentMajorState == MajorState::PassThrough) {
                 currentMajorState = previousMajorState;
             }
         }
@@ -458,7 +624,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
         if (currentMajorState == MajorState::FirstPass) {
             currentMajorState = MajorState::SecondPass;  // second pass
             previousMajorState = currentMajorState;
-            
+
             currentSection = Section::None;
 
             in_file.clear();

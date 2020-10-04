@@ -1,10 +1,11 @@
 # Files
-teste*
 *.PRE
 *.OBJ
 a.out
 montador
+teste*
 
 # Folders
-bin/
 .vscode/
+bin/
+obj/

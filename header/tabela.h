@@ -8,20 +8,31 @@ using namespace std;
 
 /**
  * @brief Instruction types.
- * Type1 - OPCODE
- * Type2 - OPCODE ADDRESS
- * Type3 - OPCODE ADDRESS_1 ADDRESS_2
+ * Type1 - Instruction
+ * Type2 - Diretive
  */
-enum InstType { Type1,
-                Type2,
-                Type3 };
+enum class InstType { Type1, Type2 };
+
+struct RawInstruction {
+    InstType type;
+    string label;
+    string instr_name;
+    vector<string> operands;
+
+    void clear() {
+        type = InstType::Type1;
+        instr_name.clear();
+        label.clear();
+        operands.clear();
+    }
+};
 
 struct Instruction {
     size_t qtd_operands;
     int opcode;
     int length;  // bytes
     
-    vector<int> operands;
+    vector<int> operands;   // end. mem
 
     Instruction(int qtd_operands, int opcode, int length) {
         this->qtd_operands = qtd_operands;

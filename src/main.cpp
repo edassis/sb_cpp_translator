@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
             cout << "Erro! Falha ao criar arquivo: " << out_file_name << endl;
             return 0;
         }
-        pre_process(in_file, out_file);
+        pre_process2(in_file, out_file);
         cout << "> Gerado arquivo \"" << out_file_name << "\"" << endl;
     } else if (option == "-o" || option == "-op") {
         string::size_type found = sf.find(".PRE");
@@ -148,4 +148,5 @@ int main(int argc, char **argv) {
 
 // No casso da diretiva SPACE deve ser colocado o valor OO no arquivo objeto (n˜ao colocar XX).
 
-// alterando para testar o makefile
+// Analisar proxima linha para formar o token (rotulo)
+// Especificar tipo de erro LEXICO, SINTATICO, SEMANTICO
