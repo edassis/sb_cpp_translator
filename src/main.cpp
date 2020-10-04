@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
             cout << "Erro! Falha ao criar arquivo: " << out_file_name << endl;
             return 0;
         }
-        pre_process2(in_file, out_file);
+        pre_process(in_file, out_file);
         cout << "> Gerado arquivo \"" << out_file_name << "\"" << endl;
     } else if (option == "-o" || option == "-op") {
         string::size_type found = sf.find(".PRE");
