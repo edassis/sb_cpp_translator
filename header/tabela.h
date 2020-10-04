@@ -13,6 +13,10 @@ using namespace std;
  */
 enum class InstType { Type1, Type2 };
 
+/**
+ * @brief Used to get instruction information from file.
+ * 
+ */
 struct RawInstruction {
     InstType type;
     string label;
@@ -25,7 +29,7 @@ struct RawInstruction {
         instr_name = "";
         operands.clear();
     }
-    
+
     void clear() {
         type = InstType::Type1;
         instr_name.clear();
@@ -34,6 +38,10 @@ struct RawInstruction {
     }
 };
 
+/**
+ * @brief Instruction type.
+ * 
+ */
 struct Instruction {
     size_t qtd_operands;
     int opcode;
@@ -48,6 +56,10 @@ struct Instruction {
     }
 };
 
+/**
+ * @brief Diretive type.
+ * 
+ */
 struct Diretive {
     size_t qtd_operands;
     int length;
@@ -56,7 +68,7 @@ struct Diretive {
 };
 
 /**
- * @brief Tabela de Instruções
+ * @brief Instruction table.
  * 
  */
 const map<string, Instruction> TI {
@@ -81,7 +93,7 @@ const map<string, Instruction> TI {
 
 
 /**
- * @brief Tabela de Diretivas
+ * @brief Directive table.
  * 
  */
 const map<string, Diretive> TD {
@@ -94,5 +106,4 @@ const map<string, Diretive> TD {
     {"CONST", Diretive(1,1)}        // DATA
 };
 
-// map<string, int> TS;
 #endif

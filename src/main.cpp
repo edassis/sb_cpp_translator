@@ -1,8 +1,5 @@
-// #include <string.h>
-
-#include <fstream>
 #include <iostream>
-// #include <iomanip>
+#include <fstream>
 #include <set>
 #include <string>
 #include <vector>
@@ -10,13 +7,28 @@
 #include "montador.h"
 #include "tabela.h"
 
-const set<string> Parameters{
-    {"-p"},
-    {"-o"},
-    {"-op"}};
-
 using namespace std;
 
+/**
+ * @brief Set of valid parameters.
+ * 
+ */
+const set<string> Parameters {
+    {"-p"},
+    {"-o"},
+    {"-op"}
+};
+
+
+/**
+ * @brief Handle arguments from the CLI.
+ * 
+ * @param argc 
+ * @param argv 
+ * @param option 
+ * @param sf 
+ * @return int 
+ */
 int get_arguments(int argc, char **argv, string &option, string &sf) {
     int ret = 0;
 
@@ -73,6 +85,7 @@ int get_arguments(int argc, char **argv, string &option, string &sf) {
 
     return ret;
 }
+
 
 int main(int argc, char **argv) {
     string option;
