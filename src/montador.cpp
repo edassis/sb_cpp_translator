@@ -43,7 +43,7 @@ void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, map<int, 
         }
     }
 
-    out_file << endl;
+    // out_file << endl;
 }
 
 void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, map<int, int> &data_table, map<string, int> &TS) {
