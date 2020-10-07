@@ -265,7 +265,7 @@ bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                     } else if (!command.empty()) {  // pode ser parametros
                         operands.push_back(token);
                     } else {
-                        cout << "Erro LEXICO! Diretiva/Instrucao invalida \"" << token << "\" "
+                        cout << "Erro SINTATICO! Diretiva/Instrucao invalida \"" << token << "\" "
                              << "(linha " << line << ")." << endl;
                     }
 
@@ -423,7 +423,7 @@ void pre_process_basic(ifstream &in_file, ofstream &out_file) {
                         }
                     } else {  // didnt find correspondent label
                         currentTextState = TextState::Pass;
-                        cout << "Erro SEMANTICO! Declaracao ausente \"" << raw_instr.operands.front() << "\" "
+                        cout << "Erro SEMANTICO! Rotulo ausente \"" << raw_instr.operands.front() << "\" "
                              << "(linha " << raw_instr.line << ")." << endl;
                     }
                 } else if (currentTextState == TextState::Get) {
@@ -504,7 +504,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                             label = e;
                             label.pop_back();
                         } else if (currentMajorState == MajorState::SecondPass) {
-                            cout << "Erro SINTATICO! Rotulo invalido \"" << e << "\" "
+                            cout << "Erro LEXICO! Rotulo invalido \"" << e << "\" "
                                  << "(linha " << line_count << ")." << endl;
                         }
                     } else if (currentMajorState == MajorState::SecondPass) {  // show errors one time only
@@ -548,7 +548,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                              << "(linha " << line_count << ")." << endl;
                     }
                 } else if (currentMajorState == MajorState::SecondPass) {  // show error only on second pass
-                    cout << "Erro SINTATICO! Diretiva com quantidade de operandos invalida \"" << command << "\" "
+                    cout << "Erro SINTATICO! Diretiva  \"" << command << "\" com quantidade de operandos invalida "
                          << "(linha " << line_count << ")." << endl;
                 }
 
@@ -591,7 +591,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                                          << "(linha " << line_count << ")." << endl;
                                 }
                             } else {
-                                cout << "Erro LEXICO! Diretiva invalida \"" << command << "\" "
+                                cout << "Erro SINTATICO! Diretiva invalida \"" << command << "\" "
                                      << "(linha " << line_count << ")." << endl;
                             }
                         } else {
@@ -643,7 +643,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                             cout << "Erro SEMANTICO! Diretiva na secao errada \"" << command << "\" "
                                  << "(linha " << line_count << ")." << endl;
                         } else {
-                            cout << "Erro LEXICO! Instrucao invalida \"" << command << "\" "
+                            cout << "Erro SINTATICO! Instrucao invalida \"" << command << "\" "
                                  << "(linha " << line_count << ")." << endl;
                         }
                     } else {
@@ -679,7 +679,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
             end_count = 0;
 
             if (!found_text) {
-                cout << "Erro SINTATICO! Secao TEXT faltando." << endl;
+                cout << "Erro SEMANTICO! Secao TEXT faltando." << endl;
                 cout << "> Compilacao interrompida." << endl;
 
                 fatal_error = true;

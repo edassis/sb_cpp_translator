@@ -6,7 +6,7 @@ Aluno:
 Informações:
 - O que foi implementado:
     Implementado montador com CHECAGEM DE ERROS conforme especificado na
-    ementa do trabalho.
+    ementa do trabalho. Rótulos/Instruções/Diretivas com erro são ignoradas.
 
     "./montador -p <nome>.asm" Gera o arquivo <nome>.PRE sem comentários, 
     espaços/tabulações desnecessários. 
@@ -16,7 +16,8 @@ Informações:
 
     "./montador -o <nome>.PRE" Gera o arquivo <nome>.OBJ contendo o binário.
 
-        Nessa etapa, o montador procura por erros de SINTAXE e SEMÂNTICOS.
+        Nessa etapa, o montador procura por todos os tipos de erros. Sempre que
+        possível gera o binário.
 
 
 - Instruções para compilar:
