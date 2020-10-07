@@ -4,8 +4,8 @@ A C++ translator for the assembly invented in class.
 
 ## Pre-Process
 
-Remove unnecessary spaces, tabs, and do basic code formatting (`.PRE` file).
-Do some checks of tokens validity and instruction/directive formation.
+Remove unnecessary spaces, tabs, comments, and do basic code formatting (`.PRE` file).
+Checks whether a given command is valid.
     
     ./montador -p <name>.asm
 
@@ -13,7 +13,7 @@ Do some checks of tokens validity and instruction/directive formation.
 ## Compile
 
 Generate binary code (`.OBJ` file).
-Checks function/diretives semantically params validity.
+Perform lexical, syntactical and semantic checks following the defined assembly grammar. Also checks the types of parameters and quantitites according to the respective command.
     
     ./montador -o <name>.PRE
 

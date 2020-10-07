@@ -99,6 +99,9 @@ int main(int argc, char **argv) {
     map<string, int> symbol_table;
     ifstream in_file(sf);
     ofstream out_file;
+    
+    bool success = false;
+    
     if (!in_file.is_open()) {
         cout << "Erro! Arquivo \"" << sf << "\" nao encontrado." << endl;
         return 0;
@@ -114,8 +117,9 @@ int main(int argc, char **argv) {
             cout << "Erro! Falha ao criar arquivo: " << out_file_name << endl;
             return 0;
         }
-        pre_process(in_file, out_file);
+        pre_process_basic(in_file, out_file);
         cout << "> Gerado arquivo \"" << out_file_name << "\"" << endl;
+        out_file.close();
     } else if (option == "-o" || option == "-op") {
         string::size_type found = sf.find(".PRE");
         string out_file_name = sf.erase(found, sf.length());
@@ -126,16 +130,22 @@ int main(int argc, char **argv) {
             cout << "Erro! Falha ao criar arquivo: " << out_file_name << endl;
             return 0;
         }
+
         if (option == "-op") {
-            compile(in_file, out_file, 1);
+            success = compile(in_file, out_file, 1);
         } else {
-            compile(in_file, out_file);
+            success = compile(in_file, out_file);
         }
-        cout << "> Gerado arquivo \"" << out_file_name << "\"" << endl;
+        
+        out_file.close();
+        
+        if (success)
+            cout << "> Gerado arquivo \"" << out_file_name << "\"" << endl;
+        else
+            remove(out_file_name.c_str());
     }
 
     in_file.close();
-    out_file.close();
 
     return 0;
 }

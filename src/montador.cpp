@@ -181,6 +181,7 @@ bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                     raw_instr.label = label;
                     raw_instr.instr_name = command;
                     raw_instr.operands = operands;
+                    raw_instr.line = command_line;
                 }
             } else if (instr_type == InstType::Type2) {
                 if (operands.size() == TD.at(command).qtd_operands) {
@@ -190,8 +191,99 @@ bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                     raw_instr.label = label;
                     raw_instr.instr_name = command;
                     raw_instr.operands = operands;
+                    raw_instr.line = command_line;
                 }
             }
+        }
+    }
+
+    return complete_instr;
+}
+
+bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line) {
+    // RawInstruction instr;
+    bool complete_instr = false;
+    bool is_comment = false;
+    string label;
+    string command;
+    int command_line = 0;
+    vector<string> operands;
+    InstType instr_type;
+
+    vector<string> tokens;
+    string token;
+    while (!complete_instr && !in_file.eof() && !in_file.bad()) {
+        char c;
+        in_file.get(c);
+
+        if (c == ';') {  // skipping commments
+            is_comment = true;
+        }
+
+        if (!is_comment) {
+            if (c != '\n' && c != '\t' && c != ' ' && !in_file.eof()) {  // building token
+                token.push_back(toupper(c));
+            } else {  // formed token
+                for (size_t i = 0; i < token.size(); i++) {  // checking token
+                    if (!isalnum(token[i]) && token[i] != '_' && token[i] != ',' && token[i] != ':') {
+                        cout << "Erro LEXICO! Token invalido \"" << token << "\" "
+                             << "(linha " << line << ")." << endl;
+
+                        // label.clear();  // invalidate all previous informations
+                        // command.clear();
+                        // operands.clear();
+
+                        token.clear();
+                        break;
+                    }
+                }
+
+                // valid token
+                if (!token.empty()) {
+                    if (token.find(":") != string::npos) {
+                        label = token;
+                        label.pop_back();
+                        command.clear();
+                        operands.clear();
+                    }
+                    // Only checks if a given command exists
+                    else if (TI.count(token) > 0) {
+                        command = token;
+                        command_line = line;
+                        instr_type = InstType::Type1;
+                        operands.clear();
+                    } else if (TD.count(token) > 0) {
+                        command = token;
+                        command_line = line;
+                        instr_type = InstType::Type2;
+                        operands.clear();
+                    } else if (!command.empty()) {  // pode ser parametros
+                        operands.push_back(token);
+                    } else {
+                        cout << "Erro SINTATICO! Diretiva/Instrucao invalida \"" << token << "\" "
+                             << "(linha " << line << ")." << endl;
+                    }
+
+                    token.clear();
+                }
+            }
+        }
+
+        // new line
+        if (c == '\n') {
+            is_comment = false;
+            line++;
+        }
+
+        // Constructing instr
+        if (!command.empty() && (c == '\n' || in_file.eof())) {
+            complete_instr = true;
+
+            raw_instr.type = instr_type;
+            raw_instr.label = label;
+            raw_instr.instr_name = command;
+            raw_instr.operands = operands;
+            raw_instr.line = command_line;
         }
     }
 
@@ -273,7 +365,79 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
     }
 }
 
-void compile(ifstream &in_file, ofstream &out_file, int mode) {
+void pre_process_basic(ifstream &in_file, ofstream &out_file) {
+    RawInstruction raw_instr;
+    int line_count = 1;
+
+    map<string, int> equ_table;
+
+    enum class MajorState { Equ,
+                            Text,
+                            Data,
+                            PassThrough };
+    MajorState currentMajorState = MajorState::Equ;
+    // MajorState previousMajorState = currentMajorState;
+
+    enum class TextState { Get,
+                           Pass };
+    TextState currentTextState = TextState::Get;
+
+    while (!in_file.eof() && !in_file.bad()) {
+        raw_instr.clear();
+        if (_get_instr_basic(in_file, raw_instr, line_count)) {
+            // check state
+            if (raw_instr.instr_name == "SECTION") {
+                if (raw_instr.operands.front() == "TEXT") {
+                    currentMajorState = MajorState::Text;
+                } else if (raw_instr.operands.front() == "DATA") {
+                    currentMajorState = MajorState::Data;
+                    // add \n on state transition
+                    out_file << endl;
+                }
+            }
+
+            if (currentMajorState == MajorState::Equ) {
+                if (raw_instr.instr_name == "EQU") {
+                    if (equ_table.count(raw_instr.label) == 0) {
+                        if (is_number(raw_instr.operands.front())) {
+                            equ_table[raw_instr.label] = stoi(raw_instr.operands.front());
+                        } else {
+                            cout << "Erro SINTATICO! Tipo de operando invalido \"" << raw_instr.operands.front() << "\" "
+                                 << "(linha " << raw_instr.line << ")." << endl;
+                        }
+                    } else {
+                        cout << "Erro SEMANTICO! Rotulo repetido \"" << raw_instr.label << "\" "
+                             << "(linha " << raw_instr.line << ")." << endl;
+                    }
+                }
+            } else if (currentMajorState == MajorState::Text || currentMajorState == MajorState::Data) {
+                if (raw_instr.instr_name == "IF") {
+                    if (equ_table.count(raw_instr.operands.front()) > 0) {  // check param(label) on equ_table
+                        if (equ_table.at(raw_instr.operands.front()) != 1) {
+                            currentTextState = TextState::Pass;
+                        }
+                    } else {  // didnt find correspondent label
+                        currentTextState = TextState::Pass;
+                        cout << "Erro SEMANTICO! Declaracao ausente \"" << raw_instr.operands.front() << "\" "
+                             << "(linha " << raw_instr.line << ")." << endl;
+                    }
+                } else if (currentTextState == TextState::Get) {
+                    if (!raw_instr.label.empty()) {
+                        out_file << raw_instr.label << ": " << raw_instr.instr_name << ' ';
+                    } else {
+                        out_file << raw_instr.instr_name << ' ';
+                    }
+                    for (auto &e : raw_instr.operands) out_file << e << ' ';
+                    out_file << '\n';
+                } else if (currentTextState == TextState::Pass) {
+                    currentTextState = TextState::Get;
+                }
+            }
+        }
+    }
+}
+
+bool compile(ifstream &in_file, ofstream &out_file, int mode) {
     enum class MajorState { FirstPass,
                             SecondPass,
                             PassThrough };
@@ -286,6 +450,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
     Section currentSection = Section::None;
 
     bool stop = false;
+    bool fatal_error = false;
     int line_count = 0;
     int end_count = 0;
 
@@ -332,25 +497,25 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                     if (label.empty()) {
                         label = e;
                         label.pop_back();
-                    }                          /* else if (currentMajorState == MajorState::SecondPass) {  // show errors one time only
-                        cout << "Erro! Mais de um rotulo na mesma linha "
+                    } else if (currentMajorState == MajorState::SecondPass) {  // show errors one time only
+                        cout << "Erro SINTATICO! Mais de um rotulo na mesma linha "
                              << "(linha " << line_count << ")." << endl;
-                    } */
+                    }
                 } else if (TI.count(e) > 0) {  // instruction
                     if (command.empty()) {
                         command = e;
                     } else if (currentMajorState == MajorState::SecondPass) {
-                        cout << "Erro SINTATICO! Instrucao com tipo de operando invalido "
+                        cout << "Erro SINTATICO! Instrucao com tipo de operando invalido \"" << e << "\" "
                              << "(linha " << line_count << ")." << endl;
                     }
                 } else if (TD.count(e) > 0) {  // directive
                     if (command.empty()) {
                         command = e;
                     } else if (currentMajorState == MajorState::SecondPass) {
-                        cout << "Erro SINTATICO! Diretiva com tipo de operando invalido "
+                        cout << "Erro SINTATICO! Diretiva com tipo de operando invalido \"" << e << "\" "
                              << "(linha " << line_count << ")." << endl;
                     }
-                } else {  // parameters isn't checked
+                } else {  // parameters isn't checked yet
                     param.push_back(e);
                 }
             }
@@ -362,15 +527,20 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
 
             // Check section
             if (!command.empty() && token[0] == "SECTION") {
-                if (param.front() == "TEXT") {
-                    found_text = true;
-                    currentSection = Section::Text;
-                } else if (param.front() == "DATA") {
-                    currentSection = Section::Data;
-                } /*  else {
-                    cout << "Erro SINTATICO! Secao invalida "
+                if (param.size() == TD.at("SECTION").qtd_operands) {
+                    if (param.front() == "TEXT") {
+                        found_text = true;
+                        currentSection = Section::Text;
+                    } else if (param.front() == "DATA") {
+                        currentSection = Section::Data;
+                    } else if (currentMajorState == MajorState::SecondPass) {
+                        cout << "Erro SINTATICO! Secao invalida \"" << param.front() << "\" "
+                             << "(linha " << line_count << ")." << endl;
+                    }
+                } else if (currentMajorState == MajorState::SecondPass) {  // show error only on second pass
+                    cout << "Erro SINTATICO! Diretiva com quantidade de operandos invalida "
                          << "(linha " << line_count << ")." << endl;
-                } */
+                }
 
                 currentMajorState = MajorState::PassThrough;
             }
@@ -444,7 +614,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                                                 cout << "Erro SINTATICO! Parametro invalido \"" << param[i] << "\" "
                                                      << "(linha " << line_count << ")." << endl;
                                             } else {  // name
-                                                cout << "Erro SEMANTICO! Rotulo ausente "
+                                                cout << "Erro SEMANTICO! Rotulo ausente \"" << param[i] << "\" "
                                                      << "(linha " << line_count << ")." << endl;
                                             }
                                             valid_param = false;
@@ -452,7 +622,7 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
                                     }
                                     if (valid_param)
                                         text_table.push_back(instr);
-                                } else {
+                                } else {  // instr without param
                                     text_table.push_back(instr);
                                 }
                             } else {
@@ -501,6 +671,8 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
             if (!found_text) {
                 cout << "Erro! Secao TEXT faltando." << endl;
                 cout << "> Compilacao interrompida." << endl;
+
+                fatal_error = true;
                 stop = true;
             }
         } else {
@@ -509,9 +681,13 @@ void compile(ifstream &in_file, ofstream &out_file, int mode) {
     }
 
     // write on output file
-    if (mode == 1) {
-        _obj_pretty(out_file, text_table, data_table, TS);
-    } else {
-        _obj_one_line(out_file, text_table, data_table, TS);
+    if (!fatal_error) {
+        if (mode == 1) {
+            _obj_pretty(out_file, text_table, data_table, TS);
+        } else {
+            _obj_one_line(out_file, text_table, data_table, TS);
+        }
     }
+
+    return !fatal_error;
 }

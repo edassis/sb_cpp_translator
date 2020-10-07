@@ -3,6 +3,17 @@
 
 #include "tabela.h"
 
+
+/**
+ * @brief Pre-process .asm files removing unnecessary spaces, tabs, new lines. 
+ * 
+ * Only checks for EQU directive usage.
+ * 
+ * @param in_file   Get instruction information from here (.asm file).
+ * @param out_file  Put result here (.PRE file).
+ */
+void pre_process_basic(ifstream &in_file, ofstream &out_file);
+
 /**
  * @brief Pre-process .asm files removing unnecessary spaces, tabs, new lines. 
  * 
@@ -18,7 +29,7 @@ void pre_process(ifstream &in_file, ofstream &out_file);
  * @param out_file Put result here (.OBJ file).
  * @param mode     0 - One line output; 1 - Tabulated output.
  */
-void compile(ifstream &in_file, ofstream &out_file, int mode = 0);
+bool compile(ifstream &in_file, ofstream &out_file, int mode = 0);
 
 /**
  * @brief Check if a given string is a number.
@@ -38,6 +49,20 @@ bool is_number(string &s);
  * @param TS            Table of symbols.
  */
 void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, map<int, int> &data_table, map<string, int> &TS);
+
+/**
+ * @brief Function that go through every char from \p in_file making valid tokens.
+ * 
+ * Only checks if a given instruction/directive is valid, put one command per
+ * line (label - command - params).
+ * 
+ * @param in_file   Scan tokens from here (.asm file).
+ * @param raw_instr Put parsed tokens here.
+ * @param line      Current line of \p in_file.
+ * @return true     If was able to get a new instruction.
+ * @return false    If not.
+ */
+bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line);
 
 /**
  * @brief Function that prints opcode, params in a tabulated form into the \p out_file.

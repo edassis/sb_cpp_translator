@@ -11,14 +11,12 @@ Informações:
     "./montador -p <nome>.asm" Gera o arquivo <nome>.PRE sem comentários, 
     espaços/tabulações desnecessários. 
     
-        Nessa etapa, o montador já faz a checagem
-        de erros LÉXICOS e alguns erros SINTÁTICOS referentes a construção
-        dos tokens/instrução/diretiva.
+        Nessa etapa, o montador checa se dado comando é uma instrução/diretiva
+        válida e trata a diretiva EQU. Confere a construção do token (checagem léxica).
 
     "./montador -o <nome>.PRE" Gera o arquivo <nome>.OBJ contendo o binário.
 
-        Nessa etapa, o montador procura por erros de SINTAXE e erros
-        SEMÂNTICOS.
+        Nessa etapa, o montador procura por erros de SINTAXE e SEMÂNTICOS.
 
 
 - Instruções para compilar:

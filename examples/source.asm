@@ -4,7 +4,8 @@
 SECTION TEXT
 INPUT OLD_DATA
 LOAD OLD_DATA
-L1: ; comentario no meio da instrucao
+COPY
+L1: L2: ADD     ; comentario no meio da instrucao
 DIV DOIS        ;dfadsfasd
 STORE  NEW_DATA ;fasdfasdfas
 MULT DOIS

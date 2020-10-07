@@ -1,0 +1,36 @@
+E1: EQU 5
+E2: EQU 10
+E3: EQU Q
+
+@@@@@@
+
+SECTION TEXT
+INPUT *** label_inexistente    ; adfasdfasd
+OLD_DATA
+LOAD 2
+LOAD OLD_DATA
+L1: 
+
+DIV DOIS        ; 3 = OLD_DATA / 2
+STORE  NEW_DATA     ; new_data = 3
+MULT DOIS           ; 6 = 3 * 2 
+STORE TMP_DATA      ; TMP_DATA = acc (6)
+LOAD OLD_DATA       ; acc = OLD_DATA
+SUB TMP_DATA        ; OLD_DATA - TMP_DATA
+STORE TMP_DATA      ; TMP_DATA = acc (3)
+OUTPUT TMP_DATA     ; "0"
+COPY NEW_DATA, OLD_DATA ; OLD_DATA = NEW_DATA (3)
+IF E3
+COPY TMP_DATA, DOIS
+LOAD OLD_DATA       ; acc = 3
+JMPP L1             ; if acc > 0
+JMPZ
+L2:
+OUTPUT TMP_DATA fon 123
+STOP
+
+SECTION DATA 312312321
+DOIS: CONST 2
+OLD_DATA: SPACE
+NEW_DATA: SPACE
+TMP_DATA: SPACE

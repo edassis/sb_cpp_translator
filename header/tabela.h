@@ -22,12 +22,14 @@ struct RawInstruction {
     string label;
     string instr_name;
     vector<string> operands;
-
+    int line;
+    
     RawInstruction() {
         type = InstType::Type1;
-        label = "";
-        instr_name = "";
+        label.clear();
+        instr_name.clear();
         operands.clear();
+        line = 0;
     }
 
     void clear() {
@@ -35,6 +37,7 @@ struct RawInstruction {
         instr_name.clear();
         label.clear();
         operands.clear();
+        line = 0;
     }
 };
 

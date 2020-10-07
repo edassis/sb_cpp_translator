@@ -1,4 +1,4 @@
-############################# Makefile ##########################
+############################# Makefile #############################
 CXX := g++
 CXXFLAGS := -Wall -g -std=c++11
 SRC_DIR := src
@@ -10,7 +10,7 @@ OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 INCLUDE := -I header/
 TARGET := montador
 
-.PHONY: all clean
+.PHONY: all clean msg
 
 all: $(TARGET) msg
 
