@@ -223,7 +223,7 @@ bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line) {
         if (!is_comment) {
             if (c != '\n' && c != '\t' && c != ' ' && !in_file.eof()) {  // building token
                 token.push_back(toupper(c));
-            } else {  // formed token
+            } else {                                         // formed token
                 for (size_t i = 0; i < token.size(); i++) {  // checking token
                     if (!isalnum(token[i]) && token[i] != '_' && token[i] != ',' && token[i] != ':') {
                         cout << "Erro LEXICO! Token invalido \"" << token << "\" "
@@ -245,6 +245,11 @@ bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                         label.pop_back();
                         command.clear();
                         operands.clear();
+                        // if (!isdigit(token[0]) && token.size() <= 50) {
+                        // } else {
+                        //     cout << "Erro SINTATICO! Rotulo invalido \"" << token << "\" "
+                        //          << "(linha " << line << ")." << endl;
+                        // }
                     }
                     // Only checks if a given command exists
                     else if (TI.count(token) > 0) {
@@ -260,7 +265,7 @@ bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                     } else if (!command.empty()) {  // pode ser parametros
                         operands.push_back(token);
                     } else {
-                        cout << "Erro SINTATICO! Diretiva/Instrucao invalida \"" << token << "\" "
+                        cout << "Erro LEXICO! Token invalido \"" << token << "\" "
                              << "(linha " << line << ")." << endl;
                     }
 
@@ -495,8 +500,13 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
             for (string &e : token) {
                 if (e.find(":") != string::npos) {  // label
                     if (label.empty()) {
-                        label = e;
-                        label.pop_back();
+                        if (e.size() < 50 && isalpha(e[0])) {
+                            label = e;
+                            label.pop_back();
+                        } else if (currentMajorState == MajorState::SecondPass) {
+                            cout << "Erro SINTATICO! Rotulo invalido \"" << e << "\" "
+                                 << "(linha " << line_count << ")." << endl;
+                        }
                     } else if (currentMajorState == MajorState::SecondPass) {  // show errors one time only
                         cout << "Erro SINTATICO! Mais de um rotulo na mesma linha "
                              << "(linha " << line_count << ")." << endl;
@@ -538,7 +548,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                              << "(linha " << line_count << ")." << endl;
                     }
                 } else if (currentMajorState == MajorState::SecondPass) {  // show error only on second pass
-                    cout << "Erro SINTATICO! Diretiva com quantidade de operandos invalida "
+                    cout << "Erro SINTATICO! Diretiva com quantidade de operandos invalida \"" << command << "\" "
                          << "(linha " << line_count << ")." << endl;
                 }
 
@@ -563,7 +573,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                                 data_table[end_count] = 0;
 
                                 if (!param.empty()) {  // SPACE n tem param
-                                    cout << "Erro SINTATICO! Diretiva com a quantidade de operandos invalida "
+                                    cout << "Erro SINTATICO! Diretiva \"" << command << "\" com a quantidade de operandos invalida "
                                          << "(linha " << line_count << ")." << endl;
                                 }
                             } else if (command == "CONST") {
@@ -573,11 +583,11 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                                     if (is_number(param.front())) {                 // param eh numero?
                                         data_table[end_count] = stoi(param.front());
                                     } else {
-                                        cout << "Erro SINTATICO! Diretiva com o tipo de operandos invalido "
+                                        cout << "Erro SINTATICO! Diretiva \"" << command << "\"  com o tipo de operandos invalido "
                                              << "(linha " << line_count << ")." << endl;
                                     }
                                 } else {
-                                    cout << "Erro SINTATICO! Diretiva com a quantidade de operandos invalida "
+                                    cout << "Erro SINTATICO! Diretiva \"" << command << "\" com a quantidade de operandos invalida "
                                          << "(linha " << line_count << ")." << endl;
                                 }
                             } else {
@@ -626,11 +636,11 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                                     text_table.push_back(instr);
                                 }
                             } else {
-                                cout << "Erro SINTATICO! Instrucao com a quantidade de operandos incorreta "
+                                cout << "Erro SINTATICO! Instrucao \"" << command << "\" com a quantidade de operandos incorreta "
                                      << "(linha " << line_count << ")." << endl;
                             }
                         } else if (TD.count(command) > 0) {  // (occurs if command is a directive)
-                            cout << "Erro SEMANTICO! Diretiva na secao errada "
+                            cout << "Erro SEMANTICO! Diretiva na secao errada \"" << command << "\" "
                                  << "(linha " << line_count << ")." << endl;
                         } else {
                             cout << "Erro SINTATICO! Instrucao invalida \"" << command << "\" "
