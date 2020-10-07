@@ -265,7 +265,7 @@ bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                     } else if (!command.empty()) {  // pode ser parametros
                         operands.push_back(token);
                     } else {
-                        cout << "Erro LEXICO! Token invalido \"" << token << "\" "
+                        cout << "Erro LEXICO! Diretiva/Instrucao invalida \"" << token << "\" "
                              << "(linha " << line << ")." << endl;
                     }
 
@@ -591,7 +591,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                                          << "(linha " << line_count << ")." << endl;
                                 }
                             } else {
-                                cout << "Erro SINTATICO! Diretiva invalida \"" << command << "\" "
+                                cout << "Erro LEXICO! Diretiva invalida \"" << command << "\" "
                                      << "(linha " << line_count << ")." << endl;
                             }
                         } else {
@@ -643,7 +643,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                             cout << "Erro SEMANTICO! Diretiva na secao errada \"" << command << "\" "
                                  << "(linha " << line_count << ")." << endl;
                         } else {
-                            cout << "Erro SINTATICO! Instrucao invalida \"" << command << "\" "
+                            cout << "Erro LEXICO! Instrucao invalida \"" << command << "\" "
                                  << "(linha " << line_count << ")." << endl;
                         }
                     } else {
@@ -679,7 +679,7 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
             end_count = 0;
 
             if (!found_text) {
-                cout << "Erro! Secao TEXT faltando." << endl;
+                cout << "Erro SINTATICO! Secao TEXT faltando." << endl;
                 cout << "> Compilacao interrompida." << endl;
 
                 fatal_error = true;
