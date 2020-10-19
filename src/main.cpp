@@ -1,3 +1,14 @@
+/**
+ * @file main.cpp
+ * @author Eduardo F. Assis
+ * @brief 
+ * @version 1.0
+ * @date 2020-10-19
+ * 
+ * @copyright Copyright (c) 2020
+ * 
+ */
+
 #include <iostream>
 #include <fstream>
 #include <set>
@@ -14,20 +25,21 @@ using namespace std;
  * 
  */
 const set<string> Parameters {
-    {"-p"},
-    {"-o"},
-    {"-op"}
+    {"-p"},     /**< Pre-process mode */
+    {"-o"},     /**< Compile mode */
+    {"-op"}     /**< Pre-process mode (pretty) */
 };
 
 
 /**
  * @brief Handle arguments from the CLI.
  * 
- * @param argc 
- * @param argv 
- * @param option 
- * @param sf 
- * @return int 
+ * @param argc      Qtd of CLI params.
+ * @param argv      Vector of CLI params.
+ * @param option    Reference to option chosed.
+ * @param sf        Reference to source file name
+ * @return \b 0     on success. 
+ * @return \b 1     on fail. 
  */
 int get_arguments(int argc, char **argv, string &option, string &sf) {
     int ret = 0;
@@ -86,7 +98,12 @@ int get_arguments(int argc, char **argv, string &option, string &sf) {
     return ret;
 }
 
-
+/**
+ * @brief Main function.
+ * 
+ * @param argc      Qtd of CLI params.
+ * @param argv      Vector of CLI params.
+ */
 int main(int argc, char **argv) {
     string option;
     string sf;

@@ -1,3 +1,14 @@
+/**
+ * @file montador.h
+ * @author Eduardo F. Assis
+ * @brief 
+ * @version 1.0
+ * @date 2020-10-19
+ * 
+ * @copyright Copyright (c) 2020
+ * 
+ */
+
 #ifndef MONTADOR_H
 #define MONTADOR_H
 
@@ -59,8 +70,8 @@ void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, map<int, 
  * @param in_file   Scan tokens from here (.asm file).
  * @param raw_instr Put parsed tokens here.
  * @param line      Current line of \p in_file.
- * @return true     If was able to get a new instruction.
- * @return false    If not.
+ * @return \b True     If was able to get a new instruction.
+ * @return \b False    If not.
  */
 bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line);
 
@@ -83,8 +94,8 @@ void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, map<int, in
  * @param in_file   Scan tokens from here (.asm file).
  * @param raw_instr Put parsed tokens here.
  * @param line      Current line of \p in_file.
- * @return true     If was able to get a new instruction.
- * @return false    If not.
+ * @return \b True     If was able to get a new instruction.
+ * @return \b False    If not.
  */
 bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line);
 
