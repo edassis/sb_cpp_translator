@@ -39,7 +39,7 @@ bool is_number(string &s) {
     return is_number;
 }
 
-void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, map<int, int> &data_table, map<string, int> &TS) {
+void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, vector<Directive> &data_table) {
     for (Instruction &instr : text_table) {
         out_file << instr.opcode << ' ';
 
@@ -48,16 +48,14 @@ void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, map<int, 
         }
     }
 
-    for (auto &e : TS) {
-        if (data_table.count(e.second) > 0) {
-            out_file << data_table[e.second] << ' ';
+    for (Directive &direc : data_table) {
+        for (auto &e : direc.operands) {
+            out_file << e << ' ';
         }
     }
-
-    // out_file << endl;
 }
 
-void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, map<int, int> &data_table, map<string, int> &TS) {
+void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, vector<Directive> &data_table) {
     int end_counter = 0;
 
     for (Instruction &instr : text_table) {
@@ -71,14 +69,17 @@ void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, map<int, in
         end_counter += instr.length;
     }
 
-    for (auto &e : TS) {
-        string end = "End " + to_string(end_counter) + ":";
-        if (data_table.count(e.second) > 0) {
-            out_file << setw(10) << left << end << setw(6) << right << data_table[e.second] << endl;
-            ;
-            end_counter++;
+    for (Directive &direc : data_table) {
+        for (auto &e : direc.operands) {
+            string end = "End " + to_string(end_counter) + ":";
+            out_file << setw(10) << left << end << setw(6) << right << e << endl;
+
+            end_counter += direc.length;
         }
     }
+}
+
+void _obj_x86(ostream &out_file, AssemblyTables tables) {
 }
 
 bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
@@ -453,7 +454,7 @@ void pre_process_basic(ifstream &in_file, ofstream &out_file) {
     }
 }
 
-bool compile(ifstream &in_file, ofstream &out_file, int mode) {
+AssemblyTables generate_tables(ifstream &in_file) {
     enum class MajorState { FirstPass,
                             SecondPass,
                             PassThrough };
@@ -472,6 +473,9 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
 
     bool found_text = false;
 
+    // tabela final
+    AssemblyTables assembly_table;
+
     // Tabela de Símbolos
     map<string, int> TS;
 
@@ -479,7 +483,8 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
     vector<Instruction> text_table;
 
     // end. mem / content
-    map<int, int> data_table;
+    vector<Directive> data_table;
+    // map<int, int> data_table;
 
     // bool found_data = false;
 
@@ -579,27 +584,54 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
                 } else if (currentSection == Section::Data) {
                     if (!label.empty()) {
                         if (TS.count(label) == 0) {
-                            if (command == "SPACE") {
-                                TS[label] = end_count;
-                                data_table[end_count] = 0;
+                            Directive direc;
+                            bool is_valid = true;
 
-                                if (!param.empty()) {  // SPACE n tem param
-                                    cout << "Erro SINTATICO! Diretiva \"" << command << "\" com a quantidade de operandos invalida "
-                                         << "(linha " << line_count << ")." << endl;
-                                }
-                            } else if (command == "CONST") {
+                            if (TD.count(command)) {
+                                direc = TD.at(command);
+                                
                                 TS[label] = end_count;
 
-                                if (param.size() == TD.at(command).qtd_operands) {  // check qtd de param
-                                    if (is_number(param.front())) {                 // param eh numero?
-                                        data_table[end_count] = stoi(param.front());
+                                if (param.size()) {
+                                    if (param.size() == TD.at(command).qtd_operands) {
+                                        if (is_number(param.front())) {
+                                            int aux = stoi(param.front());
+                                            // does nothing for others directives
+                                            if (command == "SPACE") {
+                                                for (int i = 0; i < aux; i++) {
+                                                    direc.operands.emplace_back(0);
+                                                }
+
+                                                end_count += aux - 1;    // -1 because he will increment at the end of loop
+                                            
+                                            } else if (command == "CONST") {
+                                                direc.operands.emplace_back(aux);
+                                            }
+
+                                        } else {
+                                            cout << "Erro SINTATICO! Diretiva \"" << command << "\"  com o tipo de operandos invalido "
+                                                 << "(linha " << line_count << ")." << endl;
+
+                                            is_valid = false;
+                                        }
+                                        
                                     } else {
-                                        cout << "Erro SINTATICO! Diretiva \"" << command << "\"  com o tipo de operandos invalido "
-                                             << "(linha " << line_count << ")." << endl;
+                                        cout << "Erro SINTATICO! Diretiva \"" << command << "\" com a quantidade de operandos invalida "
+                                             << "(linha " << line_count << ")." << endl;    
+
+                                        is_valid = false;
                                     }
-                                } else {
+                                } else if (command == "SPACE") {    // SPACE supports 0/1 params
+                                    direc.operands.emplace_back(0);
+                                } else if (TD.at(command).qtd_operands != param.size()) {
                                     cout << "Erro SINTATICO! Diretiva \"" << command << "\" com a quantidade de operandos invalida "
                                          << "(linha " << line_count << ")." << endl;
+                                    
+                                    is_valid = false;
+                                }
+
+                                if (is_valid) {
+                                    data_table.emplace_back(direc);
                                 }
                             } else {
                                 cout << "Erro SINTATICO! Diretiva invalida \"" << command << "\" "
@@ -701,14 +733,53 @@ bool compile(ifstream &in_file, ofstream &out_file, int mode) {
         }
     }
 
-    // write on output file
     if (!fatal_error) {
-        if (mode == 1) {
-            _obj_pretty(out_file, text_table, data_table, TS);
-        } else {
-            _obj_one_line(out_file, text_table, data_table, TS);
-        }
+        assembly_table.text_table = text_table;
+        assembly_table.data_table = data_table;
+    } else {
+        cout << "Erro! Nao foi possivel gerar as tabelas de compilacao." << endl;
     }
 
-    return !fatal_error;
+    return assembly_table;
+}
+
+bool assembly(ifstream &in_file, ofstream &out_file, int mode) {
+    AssemblyTables tables = generate_tables(in_file);
+
+    if (tables.empty()) return false;
+
+    if (mode == 1) {
+        _obj_pretty(out_file, tables.text_table, tables.data_table);
+    } else {
+        _obj_one_line(out_file, tables.text_table, tables.data_table);
+    }
+
+    return true;
+}
+
+bool translate_x86(ifstream &in_file, ofstream &out_file) {
+    ofstream w_pre_file;
+    w_pre_file.open("temp.PRE");
+    if (!w_pre_file.is_open()) {
+        cout << "Erro ao criar arquivo temporario de pré-processamento" << endl;
+        return false;
+    }
+
+    pre_process(in_file, w_pre_file);
+    w_pre_file.close();
+    
+    ifstream r_pre_file;
+    r_pre_file.open("temp.PRE");
+    if (!r_pre_file.is_open()) {
+        cout << "Erro ao abrir arquivo temporario de pré-processamento" << endl;
+        return false;
+    }
+
+    AssemblyTables tables = generate_tables(r_pre_file);
+
+    if (tables.empty()) return false;
+    
+    _obj_x86(out_file, tables);
+
+    return true;
 }

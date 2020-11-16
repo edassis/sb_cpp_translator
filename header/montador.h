@@ -8,12 +8,10 @@
  * @copyright Copyright (c) 2020
  * 
  */
-
 #ifndef MONTADOR_H
 #define MONTADOR_H
 
 #include "tabela.h"
-
 
 /**
  * @brief Pre-process .asm files removing unnecessary spaces, tabs, new lines. 
@@ -38,9 +36,9 @@ void pre_process(ifstream &in_file, ofstream &out_file);
  * 
  * @param in_file  Get instruction information from here (.PRE file).
  * @param out_file Put result here (.OBJ file).
- * @param mode     0 - One line output; 1 - Tabulated output.
+ * @param mode     0 - One line output; 1 - Tabulated output; 2 - x86 assembly.
  */
-bool compile(ifstream &in_file, ofstream &out_file, int mode = 0);
+bool assembly(ifstream &in_file, ofstream &out_file, int mode = 0);
 
 /**
  * @brief Check if a given string is a number.
@@ -56,10 +54,9 @@ bool is_number(string &s);
  * 
  * @param out_file      Destination (.OBJ file).
  * @param text_table    Table contaning instructions from TEXT section.
- * @param data_table    Table contaning variables from DATA section.
- * @param TS            Table of symbols.
+ * @param data_table    Table contaning directives from DATA section.
  */
-void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, map<int, int> &data_table, map<string, int> &TS);
+void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, vector<Directive> &data_table);
 
 /**
  * @brief Function that go through every char from \p in_file making valid tokens.
@@ -80,10 +77,9 @@ bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line);
  * 
  * @param out_file      Destination (.OBJ file).
  * @param text_table    Table contaning instructions from TEXT section.
- * @param data_table    Table contaning variables from DATA section.
- * @param TS            Table of symbols.
+ * @param data_table    Table contaning directives from DATA section.
  */
-void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, map<int, int> &data_table, map<string, int> &TS);
+void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, vector<Directive> &data_table);
 
 /**
  * @brief Function that go through every char from \p in_file making valid tokens.
@@ -99,4 +95,22 @@ void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, map<int, in
  */
 bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line);
 
+/**
+ * @brief Translates the pre-processed file in our created assembly to x86 NASM assembly.
+ * 
+ * @param in_file   .PRE file
+ * @param out_file  The translated file (.asm).
+ * @return \b True  If translated with success.
+ * @return \b False Case not.
+ */
+bool translate_x86(ifstream &in_file, ofstream &out_file);
+
+/**
+ * @brief Used to create the structure containing the operations analyzed and
+ * recognized from the input file (Compile step). 
+ * 
+ * @param in_file   .PRE file
+ * @return AssemblyTables   Structure containing the data to generate the binary file.
+ */
+AssemblyTables generate_tables(ifstream &in_file);
 #endif

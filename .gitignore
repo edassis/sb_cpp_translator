@@ -1,6 +1,7 @@
 # Files
 *.PRE
 *.OBJ
+*.obj
 *.zip
 a.out
 montador

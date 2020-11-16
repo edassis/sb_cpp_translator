@@ -35,5 +35,13 @@ Informações:
         $ ./montador
 
 
+- Compilar para linux:
+	$ nasm -f elf -o hello.o hello.asm
+	$ ld -m elf_i386 -o hello hello.o
+
+	$ nasm -f win32 ass.asm -o ass.obj
+	$ ld -mi386pe -o ass.exe ass.obj
+
+
 - Versão do compilador:
     -> g++ (Ubuntu 9.3.0-10ubuntu2) 9.3.0

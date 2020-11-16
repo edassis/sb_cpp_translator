@@ -25,4 +25,4 @@ Perform lexical, syntactical and semantic checks following the defined assembly 
 ![Tabela de comandos][1]
 
 
-[1]: images/OPCODE-Table.PNG
+[1]: assets/images/OPCODE-Table.png

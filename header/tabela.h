@@ -22,7 +22,7 @@ using namespace std;
  */
 enum class InstType {
     Type1,  /**< Instruction. */
-    Type2   /**< Diretive. */
+    Type2   /**< Directive. */
 };
 
 /**
@@ -72,14 +72,25 @@ struct Instruction {
 };
 
 /**
- * @brief Diretive type.
+ * @brief Directive type.
  * 
  */
-struct Diretive {
+struct Directive {
     size_t qtd_operands;
     int length;
 
-    Diretive(int qtd_operands, int length) : qtd_operands(qtd_operands), length(length){};
+    vector<int> operands;
+
+    Directive(int qtd_operands = 0, int length = 0) : qtd_operands(qtd_operands), length(length){};
+};
+
+struct AssemblyTables {
+    vector<Instruction> text_table;
+    vector<Directive> data_table;
+
+    bool empty() {
+        return text_table.empty() && data_table.empty();
+    }
 };
 
 /**
@@ -87,7 +98,7 @@ struct Diretive {
  * 
  */
 const map<string, Instruction> TI{
-    {"ADD", Instruction(1, 1, 2)},
+    {"ADD", Instruction(1, 1, 2)},      // operands, op, len
     {"SUB", Instruction(1, 2, 2)},
     {"MULT", Instruction(1, 3, 2)},
     {"DIV", Instruction(1, 4, 2)},
@@ -101,7 +112,12 @@ const map<string, Instruction> TI{
     {"LOAD", Instruction(1, 10, 2)},
     {"STORE", Instruction(1, 11, 2)},
     {"INPUT", Instruction(1, 12, 2)},
+    {"INPUT", Instruction(1, 12, 2)},
     {"OUTPUT", Instruction(1, 13, 2)},
+    {"C_INPUT", Instruction(1, 15, 2)},     // label
+    {"C_OUTPUT", Instruction(1, 16, 2)},
+    {"S_INPUT", Instruction(2, 19, 3)},     // label, length (max 100)
+    {"S_OUTPUT", Instruction(2, 20, 3)},
 
     {"STOP", Instruction(0, 14, 1)},
 };
@@ -110,14 +126,14 @@ const map<string, Instruction> TI{
  * @brief Directive table.
  * 
  */
-const map<string, Diretive> TD{
-    {"EQU", Diretive(1, 0)},  // at the beginning
-    {"SECTION", Diretive(1, 0)},
-    {"MACRO", Diretive(0, 0)},  // TEXT
-    {"ENDMACRO", Diretive(0, 0)},
-    {"IF", Diretive(1, 0)},     // TEXT
-    {"SPACE", Diretive(0, 1)},  // DATA
-    {"CONST", Diretive(1, 1)}   // DATA
+const map<string, Directive> TD{
+    {"EQU", Directive(1, 0)},  // at the beginning
+    {"SECTION", Directive(1, 0)},
+    {"MACRO", Directive(0, 0)},  // TEXT
+    {"ENDMACRO", Directive(0, 0)},
+    {"IF", Directive(1, 0)},     // TEXT
+    {"SPACE", Directive(1, 1)},  // DATA
+    {"CONST", Directive(1, 1)}   // DATA
 };
 
 #endif
