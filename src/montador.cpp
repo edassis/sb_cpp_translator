@@ -39,6 +39,12 @@ bool is_number(string &s) {
     return is_number;
 }
 
+/* bool is(vector<string> &vs) {
+    for (unsigned i = 0; i < vs.size(); i++) {
+        if (vs[i] == '+') 
+    }
+} */
+
 void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, vector<Directive> &data_table) {
     for (Instruction &instr : text_table) {
         out_file << instr.opcode << ' ';
@@ -107,7 +113,7 @@ bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                 token.push_back(toupper(c));
             } else {                                         // formed token
                 for (size_t i = 0; i < token.size(); i++) {  // checking token
-                    if (!isalnum(token[i]) && token[i] != '_' && token[i] != ',' && token[i] != ':') {
+                    if (!isalnum(token[i]) && token[i] != '_' && token[i] != ',' && token[i] != ':' && token[i] != '+') {
                         cout << "Erro LEXICO! Token invalido \"" << token << "\" "
                              << "(linha " << line << ")." << endl;
 
@@ -237,7 +243,7 @@ bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                 token.push_back(toupper(c));
             } else {                                         // formed token
                 for (size_t i = 0; i < token.size(); i++) {  // checking token
-                    if (!isalnum(token[i]) && token[i] != '_' && token[i] != ',' && token[i] != ':') {
+                    if (!isalnum(token[i]) && token[i] != '_' && token[i] != ',' && token[i] != ':' && token[i] != '+') {
                         cout << "Erro LEXICO! Token invalido \"" << token << "\" "
                              << "(linha " << line << ")." << endl;
 
@@ -257,12 +263,8 @@ bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line) {
                         label.pop_back();
                         command.clear();
                         operands.clear();
-                        // if (!isdigit(token[0]) && token.size() <= 50) {
-                        // } else {
-                        //     cout << "Erro SINTATICO! Rotulo invalido \"" << token << "\" "
-                        //          << "(linha " << line << ")." << endl;
-                        // }
                     }
+
                     // Only checks if a given command exists
                     else if (TI.count(token) > 0) {
                         command = token;
@@ -552,7 +554,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
             }
 
             // Check section
-            if (!command.empty() && token[0] == "SECTION") {
+            if (command == "SECTION") {
                 if (param.size() == TD.at("SECTION").qtd_operands) {
                     if (param.front() == "TEXT") {
                         found_text = true;
@@ -602,7 +604,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                                     direc.operands.emplace_back(0);
                                                 }
 
-                                                end_count += aux - 1;    // -1 because he will increment at the end of loop
+                                                end_count += aux - 1;    // -1 because we will increment at the end of loop
                                             
                                             } else if (command == "CONST") {
                                                 direc.operands.emplace_back(aux);
@@ -650,26 +652,52 @@ AssemblyTables generate_tables(ifstream &in_file) {
                     cout << "Erro SEMANTICO! Diretiva/Instrucao na secao errada \"" << command << "\" "
                          << "(linha " << line_count << ")." << endl;
                 }
-            } else if (currentMajorState == MajorState::SecondPass) {  // generate obj code, check instr's params, check labels on TS
+            } else if (currentMajorState == MajorState::SecondPass) {  // generate text/data table, check instr's params, check labels on TS
                 if (currentSection == Section::Text) {
                     if (!command.empty()) {
                         if (TI.count(command) > 0) {
                             Instruction instr = TI.at(command);
+/////////////////////// NOVIDADE
+                            struct ParamType {
+                                string value;
+                                int increment;
+                            };
+                            vector<ParamType> inc_param;
 
-                            if (instr.qtd_operands == param.size()) {
+
+                            for (unsigned i = 0; i < param.size();) {   // determine if params have increment and put this on s_param vector
+                                ParamType n_param;
+                                n_param.value = ""; n_param.increment = 0;
+
+                                if (!is_number(param[i])) { // label
+                                    if (i + 2 < param.size() && param[i+1] == "+" && is_number(param[i+2])) {     // increment
+                                        n_param.value = param[i];
+                                        n_param.increment = stoi(param[i+2]);
+
+                                        i += 3;
+                                    } else {
+                                        n_param.value = param[i];
+                                        i++;
+                                    }
+                                } else {
+                                    cout << "Erro SINTATICO! Parametro invalido \"" << param[i] << "\" "
+                                         << "(linha " << line_count << ")." << endl;
+                                }
+
+                                inc_param.emplace_back(n_param);
+                            }
+
+                            if (instr.qtd_operands == inc_param.size()) {
                                 if (instr.qtd_operands > 0) {  // has param
                                     bool valid_param = true;
-                                    for (size_t i = 0; i < instr.qtd_operands; i++) {  // check param on TS
-                                        if (TS.count(param[i]) > 0) {
-                                            instr.operands.push_back(TS[param[i]]);
+                                    for (unsigned i = 0; i < inc_param.size(); i++) {  // check param on TS
+                                        if (TS.count(inc_param[i].value) > 0) {
+                                            if (inc_param[i].increment) instr.operands.emplace_back(TS[inc_param[i].value] + inc_param[i].increment);
+                                            else instr.operands.emplace_back(TS[inc_param[i].value]);
                                         } else {
-                                            if (is_number(param[i])) {  // number
-                                                cout << "Erro SINTATICO! Parametro invalido \"" << param[i] << "\" "
-                                                     << "(linha " << line_count << ")." << endl;
-                                            } else {  // name
-                                                cout << "Erro SEMANTICO! Rotulo ausente \"" << param[i] << "\" "
-                                                     << "(linha " << line_count << ")." << endl;
-                                            }
+                                            cout << "Erro SEMANTICO! Rotulo ausente \"" << inc_param[i].value << "\" "
+                                                 << "(linha " << line_count << ")." << endl;
+
                                             valid_param = false;
                                         }
                                     }
@@ -765,7 +793,9 @@ bool translate_x86(ifstream &in_file, ofstream &out_file) {
         return false;
     }
 
-    pre_process(in_file, w_pre_file);
+    cout << "> Começando pre-processamento." << endl;
+    pre_process_basic(in_file, w_pre_file);
+    
     w_pre_file.close();
     
     ifstream r_pre_file;
@@ -775,11 +805,15 @@ bool translate_x86(ifstream &in_file, ofstream &out_file) {
         return false;
     }
 
+    cout << "> Gerando tabelas de montagem" << endl;
     AssemblyTables tables = generate_tables(r_pre_file);
 
     if (tables.empty()) return false;
     
+    cout << "> Iniciando tradução para assembly x86" << endl;
     _obj_x86(out_file, tables);
+
+    r_pre_file.close();
 
     return true;
 }
