@@ -26,6 +26,24 @@ enum class InstType {
 };
 
 /**
+ * @brief Parameters type
+ * 
+ */
+enum class ParamType {
+    EndMem,
+    Imediate
+};
+
+/**
+ * @brief Parameters structure
+ * 
+ */
+struct Param {
+    ParamType type;
+    int value;
+};
+
+/**
  * @brief Used to get instruction information from file.
  * 
  */
@@ -62,12 +80,13 @@ struct Instruction {
     int opcode;
     int length;  // bytes
 
-    vector<int> operands;  // end. mem
+    vector<Param> operands;  // end. mem or imediate
 
-    Instruction(int qtd_operands, int opcode, int length) {
+    Instruction(int qtd_operands, int opcode, int length/* , vector<Param> operands */) /* : operands(operands) */{
         this->qtd_operands = qtd_operands;
         this->opcode = opcode;
         this->length = length;
+        // this->operands = operands;
     }
 };
 
@@ -79,7 +98,7 @@ struct Directive {
     size_t qtd_operands;
     int length;
 
-    vector<int> operands;
+    vector<Param> operands;
 
     Directive(int qtd_operands = 0, int length = 0) : qtd_operands(qtd_operands), length(length){};
 };
@@ -98,6 +117,7 @@ struct AssemblyTables {
  * 
  */
 const map<string, Instruction> TI{
+    // {"ADD", Instruction(1, 1, 2, {{ParamType::EndMem, 0}, {ParamType::EndMem, 0}})},      // operands, op, len
     {"ADD", Instruction(1, 1, 2)},      // operands, op, len
     {"SUB", Instruction(1, 2, 2)},
     {"MULT", Instruction(1, 3, 2)},

@@ -39,24 +39,18 @@ bool is_number(string &s) {
     return is_number;
 }
 
-/* bool is(vector<string> &vs) {
-    for (unsigned i = 0; i < vs.size(); i++) {
-        if (vs[i] == '+') 
-    }
-} */
-
 void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, vector<Directive> &data_table) {
     for (Instruction &instr : text_table) {
         out_file << instr.opcode << ' ';
 
         for (auto &e : instr.operands) {
-            out_file << e << ' ';
+            out_file << e.value << ' ';
         }
     }
 
     for (Directive &direc : data_table) {
         for (auto &e : direc.operands) {
-            out_file << e << ' ';
+            out_file << e.value << ' ';
         }
     }
 }
@@ -69,7 +63,7 @@ void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, vector<Dire
         out_file << setw(10) << left << end << setw(6) << right << instr.opcode;
 
         for (auto &e : instr.operands) {
-            out_file << setw(6) << right << e;
+            out_file << setw(6) << right << e.value;
         }
         out_file << endl;
         end_counter += instr.length;
@@ -78,7 +72,7 @@ void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, vector<Dire
     for (Directive &direc : data_table) {
         for (auto &e : direc.operands) {
             string end = "End " + to_string(end_counter) + ":";
-            out_file << setw(10) << left << end << setw(6) << right << e << endl;
+            out_file << setw(10) << left << end << setw(6) << right << e.value << endl;
 
             end_counter += direc.length;
         }
@@ -109,7 +103,7 @@ bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
         }
 
         if (!is_comment) {
-            if (c != '\n' && c != '\t' && c != ' ' && !in_file.eof()) {  // building token
+            if (c != '\n' && c != '\r' && c != '\t' && c != ' ' && !in_file.eof()) {  // building token
                 token.push_back(toupper(c));
             } else {                                         // formed token
                 for (size_t i = 0; i < token.size(); i++) {  // checking token
@@ -239,7 +233,7 @@ bool _get_instr_basic(ifstream &in_file, RawInstruction &raw_instr, int &line) {
         }
 
         if (!is_comment) {
-            if (c != '\n' && c != '\t' && c != ' ' && !in_file.eof()) {  // building token
+            if (c != '\n' && c != '\r' && c != '\t' && c != ' ' && !in_file.eof()) {  // building token
                 token.push_back(toupper(c));
             } else {                                         // formed token
                 for (size_t i = 0; i < token.size(); i++) {  // checking token
@@ -601,13 +595,19 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                             // does nothing for others directives
                                             if (command == "SPACE") {
                                                 for (int i = 0; i < aux; i++) {
-                                                    direc.operands.emplace_back(0);
+                                                    Param defined_param;
+                                                    defined_param.type = ParamType::Imediate; defined_param.value = 0;
+                                                    
+                                                    direc.operands.emplace_back(defined_param);
                                                 }
 
                                                 end_count += aux - 1;    // -1 because we will increment at the end of loop
                                             
                                             } else if (command == "CONST") {
-                                                direc.operands.emplace_back(aux);
+                                                Param defined_param;
+                                                defined_param.type = ParamType::Imediate; defined_param.value = aux;
+                                                
+                                                direc.operands.emplace_back(defined_param);
                                             }
 
                                         } else {
@@ -624,7 +624,10 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                         is_valid = false;
                                     }
                                 } else if (command == "SPACE") {    // SPACE supports 0/1 params
-                                    direc.operands.emplace_back(0);
+                                    Param defined_param;
+                                    defined_param.type = ParamType::Imediate; defined_param.value = 0;
+                                    
+                                    direc.operands.emplace_back(defined_param);
                                 } else if (TD.at(command).qtd_operands != param.size()) {
                                     cout << "Erro SINTATICO! Diretiva \"" << command << "\" com a quantidade de operandos invalida "
                                          << "(linha " << line_count << ")." << endl;
@@ -658,49 +661,61 @@ AssemblyTables generate_tables(ifstream &in_file) {
                         if (TI.count(command) > 0) {
                             Instruction instr = TI.at(command);
 /////////////////////// NOVIDADE
-                            struct ParamType {
-                                string value;
-                                int increment;
-                            };
-                            vector<ParamType> inc_param;
+                            vector<pair<string, int>> inc_param;        // parameters to include (label, imediate)
 
 
-                            for (unsigned i = 0; i < param.size();) {   // determine if params have increment and put this on s_param vector
-                                ParamType n_param;
-                                n_param.value = ""; n_param.increment = 0;
-
+                            for (unsigned i = 0; i < param.size(); i++) {   // determine if params have increment and put this on s_param vector
+                                pair<string, int> n_param;      // new parameter
+                                n_param.first = "", n_param.second = 0;
+                                bool valid = true;
                                 if (!is_number(param[i])) { // label
                                     if (i + 2 < param.size() && param[i+1] == "+" && is_number(param[i+2])) {     // increment
-                                        n_param.value = param[i];
-                                        n_param.increment = stoi(param[i+2]);
+                                        n_param.first = param[i];
+                                        n_param.second = stoi(param[i+2]);
 
-                                        i += 3;
+                                        i += 2; // skip next 2
                                     } else {
-                                        n_param.value = param[i];
-                                        i++;
+                            
+                                        n_param.first = param[i];
                                     }
+                                } else if (command == "S_INPUT" || command == "S_OUTPUT") {       // accepts immediate as parameter
+                                    int im = stoi(param[i]);
+                                    n_param.second = im;
+                                    /* if (im <= 100) n_param.second = stoi(param[i]);
+                                    else cout << "Erro SINTATICO! Imediato \"" << param[i] << "\" maior que 100"
+                                         << "(linha " << line_count << ")." << endl; */
                                 } else {
                                     cout << "Erro SINTATICO! Parametro invalido \"" << param[i] << "\" "
                                          << "(linha " << line_count << ")." << endl;
+
+                                    valid = false;
                                 }
 
-                                inc_param.emplace_back(n_param);
+                                if (valid) inc_param.emplace_back(n_param);
                             }
 
                             if (instr.qtd_operands == inc_param.size()) {
                                 if (instr.qtd_operands > 0) {  // has param
                                     bool valid_param = true;
                                     for (unsigned i = 0; i < inc_param.size(); i++) {  // check param on TS
-                                        if (TS.count(inc_param[i].value) > 0) {
-                                            if (inc_param[i].increment) instr.operands.emplace_back(TS[inc_param[i].value] + inc_param[i].increment);
-                                            else instr.operands.emplace_back(TS[inc_param[i].value]);
-                                        } else {
-                                            cout << "Erro SEMANTICO! Rotulo ausente \"" << inc_param[i].value << "\" "
-                                                 << "(linha " << line_count << ")." << endl;
+                                        Param defined_param;
 
-                                            valid_param = false;
+                                        if (inc_param[i].first.size()) {    // has label
+                                            if (TS.count(inc_param[i].first) > 0) {
+                                                defined_param.type = ParamType::EndMem; defined_param.value = TS[inc_param[i].first] + inc_param[i].second;
+                                                instr.operands.emplace_back(defined_param);
+                                            } else {
+                                                cout << "Erro SEMANTICO! Rotulo ausente \"" << inc_param[i].first << "\" "
+                                                    << "(linha " << line_count << ")." << endl;
+
+                                                valid_param = false;
+                                            }
+                                        } else {    // imediate
+                                            defined_param.type = ParamType::Imediate; defined_param.value = inc_param[i].second;
+                                            instr.operands.emplace_back(defined_param);
                                         }
                                     }
+
                                     if (valid_param)
                                         text_table.push_back(instr);
                                 } else {  // instr without param
