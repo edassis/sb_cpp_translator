@@ -26,7 +26,7 @@ section .data
     MSG2_SIZE equ $-msg2
 
     BUFFER_MAX_SIZE equ 100
-    buffer_pos dw 0
+    buffer_len dw 0
 
 section .bss
     buffer resb 100
@@ -37,10 +37,10 @@ section .text
 
 LerChar: mov ecx, eax   ; qtd to read, max = 100
     cmp ecx, BUFFER_MAX_SIZE
-    jl LerChar_L1
+    jl .l1
     mov ecx, BUFFER_MAX_SIZE
 
-LerChar_L1: push ecx
+.l1: push ecx
     mov eax, SYS_READ       ; syscall
     mov ebx, STDIN          ; file descriptor
     mov ecx, char ; end.
@@ -48,17 +48,18 @@ LerChar_L1: push ecx
     int KERNEL_CALL         ; interruption
     
     cmp byte [char], 0ah    ; \n
-    je LerChar_END
-    mov ebx, buffer_pos
-    mov [buffer+ebx*2], char  ; buffer[i] = char
-    inc word [buffer_pos]  
+    je .end
+    movzx ebx, word [buffer_len]
+    mov al, [char]
+    mov [buffer+ebx], al   ; buffer[i] = char
+    inc word [buffer_len]  
     pop ecx
-    loop LerChar_L1
+    loop .l1
 
-LerChar_END: call PrintMsg
-    mov eax, [buffer]
-    mov ebx, buffer_pos
-    add ebx, 1 ; length
+.end: call PrintMsg
+    mov eax, buffer
+    mov ebx, buffer_len
+    ; add ebx, 1 ; length
     ret
 
 
@@ -71,8 +72,8 @@ PrintMsg: mov eax, SYS_WRITE       ; syscall
     mov eax, SYS_WRITE       ; syscall
     mov ebx, STDOUT          ; file descriptor
     mov ecx, buffer ; end.
-    mov edx, buffer_pos   ; len = pos + 1
-    add edx, 1
+    mov edx, buffer_len   ; len = pos
+    ; add edx, 1
     int KERNEL_CALL         ; interruption
 
     mov eax, SYS_WRITE       ; syscall
@@ -98,8 +99,8 @@ _start:
     mov eax, 3
     call LerChar ; eax contains the address with data
 
-    mov ecx, eax
-    mov edx, ebx
+    mov ecx, eax    ; end
+    mov edx, ebx    ; len
 
     mov eax, SYS_WRITE       ; syscall
     mov ebx, STDOUT          ; file descriptor

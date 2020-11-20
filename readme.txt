@@ -36,7 +36,7 @@ Informações:
 
 
 - Compilar para linux:
-	$ nasm -f elf -o hello.o hello.asm
+	$ nasm -g -f elf -o hello.o hello.asm
 	$ ld -m elf_i386 -o hello hello.o
 
 	$ nasm -f win32 ass.asm -o ass.obj
@@ -45,3 +45,11 @@ Informações:
 
 - Versão do compilador:
     -> g++ (Ubuntu 9.3.0-10ubuntu2) 9.3.0
+
+
+gdb:
+layout regs
+objdump -S assets/assembly/IA32/inout.o > fon.txt    
+objdump -D assets/assembly/IA32/inout.o > fon.txt
+readelf -x .data assets/assembly/IA32/inout.o > fon.txt  
+readelf -a .data assets/assembly/IA32/inout.o > fon.txt  
