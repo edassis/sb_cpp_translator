@@ -1,5 +1,7 @@
 section .data
 msg         db      'Hello World',0dh,0ah
+nwln        db      0dh, 0ah
+NWLNSIZE    EQU     $-nwln
 SIZE_MSG    EQU     $-msg
 
 section .text
