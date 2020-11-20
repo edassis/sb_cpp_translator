@@ -9,7 +9,6 @@ montador
 teste*
 
 # Folders
-.vscode/
 bin/
 obj/
 docs/
