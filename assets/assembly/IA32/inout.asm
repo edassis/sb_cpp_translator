@@ -10,8 +10,8 @@ STDOUT equ 1
 KERNEL_CALL equ 80h
 
 %macro exit_program 0
-    mov eax,1
-    mov ebx,0
+    mov eax,1   ; exit
+    mov ebx,0   ; return value
     int 80h
 %endmacro
 
@@ -25,7 +25,7 @@ section .data
     msg2 db " caracteres."
     MSG2_SIZE equ $-msg2
 
-    BUFFER_SIZE equ 100
+    BUFFER_MAX_SIZE equ 100
     buffer_pos dw 0
 
 section .bss
@@ -36,9 +36,9 @@ section .text
     global _start
 
 LerChar: mov ecx, eax   ; qtd to read, max = 100
-    cmp ecx, 100
+    cmp ecx, BUFFER_MAX_SIZE
     jl LerChar_L1
-    mov ecx, 100
+    mov ecx, BUFFER_MAX_SIZE
 
 LerChar_L1: push ecx
     mov eax, SYS_READ       ; syscall
