@@ -36,7 +36,7 @@ Informações:
 
 
 - Compilar para linux:
-	$ nasm -g -f elf -o hello.o hello.asm
+	$ nasm -w+all -g -f elf32 -F dwarf -o hello.o hello.asm
 	$ ld -m elf_i386 -o hello hello.o
 
 	$ nasm -f win32 ass.asm -o ass.obj
@@ -52,4 +52,17 @@ layout regs
 objdump -S assets/assembly/IA32/inout.o > fon.txt    
 objdump -D assets/assembly/IA32/inout.o > fon.txt
 readelf -x .data assets/assembly/IA32/inout.o > fon.txt  
-readelf -a .data assets/assembly/IA32/inout.o > fon.txt  
+readelf -a .data assets/assembly/IA32/inout.o > fon.txt
+
+gdb /a.out --tui
+layout regs
+quit
+run
+step
+next
+break <line> <label>
+print or p[/<type>] (cast[len]) <variable>
+display <variable>
+x/[type] <register>         // acessa o valor
+info b
+info l
