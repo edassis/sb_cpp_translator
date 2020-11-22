@@ -36,11 +36,11 @@ section .data
     nwln        db      0dh, 0ah
     NWLN_SIZE    EQU     $-nwln
 
-    msg1 db "Foram lidos ",0h
+    msg1 db "Foram lidos ",
     MSG1_SIZE equ $-msg1
-    msg_chars db " caracteres.",0h
+    msg_chars db " caracteres.",0
     MSG_CHARS_SIZE equ $-msg_chars
-    msg_nums db " algarismos.",0h
+    msg_nums db " algarismos.",0
     MSG_NUMS_SIZE equ $-msg_nums
 
     BUFFER_MAX_SIZE equ 100
@@ -53,28 +53,26 @@ section .bss
 section .text
     global _start
 
+; not safe
 ; eax - end. mem
 ; ebx - len
 Print:
-    ; pusha
     mov ecx, eax
     mov edx, ebx
     mov eax, SYS_WRITE      ; syscall
     mov ebx, STDOUT          ; file descriptor
     int KERNEL_CALL         ; interruption
-    ; popa
     ret
 
+; not safe
 ; eax - end. mem
 ; ebx - len
 Scan:
-    ; pusha
     mov ecx, eax    ; len
     mov edx, ebx
     mov eax, SYS_READ      ; syscall
     mov ebx, STDIN          ; file descriptor
     int KERNEL_CALL         ; interruption
-    ; popa
     ret
 
 ; not safe
@@ -102,7 +100,7 @@ PrintLidos:
     sub esp, BUFFER_MAX_SIZE*2  ; words
     call IntToString
     
-    mov ecx, ebx    ; len
+    mov ecx, eax    ; len
     mov ebx, 1
 .l1:
     push ebx    ; counter
@@ -144,13 +142,16 @@ PrintLidos:
     add esp, 4      ; rm first push
     ret 
 
-; not safe
 ; eax - value
-; return into stack
+; values into stack, eax - len
 IntToString:    ; stack = x return; 200 bytes
-    xor ecx, ecx    ; counter
+    push ebx
+    push ecx
+    push edx
     push ebp
     mov ebp, esp  
+
+    xor ecx, ecx    ; counter
 .l1:
     xor edx, edx
     mov ebx, 10     ; divisor
@@ -170,27 +171,29 @@ IntToString:    ; stack = x return; 200 bytes
     jl .quo
 .inverse: 
     mov ebx, ebp    ; base address
-    add ebx, BUFFER_MAX_SIZE*2+8     ; base position of return array | return | ebp
+    add ebx, BUFFER_MAX_SIZE*2+20     ; +16 | eip | ret
     mov edx, ecx    ; copy
 .inverse_l1: 
     pop ax          ; value
     sub ebx, 2
     mov word [ebx], ax
     loop .inverse_l1
-    
-    mov ecx, edx
 .end:
-    mov eax, ebx        ; top of return array
-    mov ebx, ecx        ; len
+    mov eax, edx        ; len
 
     mov esp, ebp        ; recover stack
-    pop ebp             ;
+    pop ebp
+    pop edx
+    pop ecx
+    pop ebx
     ret
 
-; not safe
 ; access buffer
-; return value on eax
-StringToInt: ; String to int
+; return value on stack
+StringToInt: 
+    pusha       ; +32
+    mov ebp, esp
+
     xor ecx, ecx
     xor ebx, ebx
 .l1:
@@ -221,13 +224,21 @@ StringToInt: ; String to int
     pop ecx
     jmp .l1
 .end:
-    mov eax, ebx
+    mov [ebp+36], ebx    ; +32 | eip | value 
+
+    mov esp, ebp
+    popa
     ret
 
-; not safe
+; -------------------------------------------------------
+; Subroutines
+; -------------------------------------------------------
 ; eax - qtd max
-; return: eax - address, ebx - len
-LerString: 
+; return: eax - address, ebx - len !!!!!!
+LerString:
+    pusha
+    mov word [buffer_len], 0
+    mov byte [r_char], 0
     mov ecx, eax   ; qtd to read, max = 100
     cmp ecx, 0
     jle .setmax
@@ -242,74 +253,100 @@ LerString:
     call Scan 
     pop ecx                 ; unstack before jump
     
-    cmp byte [r_char], 0ah  ; \n
-    je .end
+    cmp byte [r_char], 0ah
+    je .cond
+    cmp byte [r_char], ' '  ; space 32
+    jb .l1
+    cmp byte [r_char], '~'  ; 126
+    ja .l1
 
     movzx ebx, word [buffer_len]
     mov al, [r_char]
     mov [buffer+ebx], al   ; buffer[i] = char
     inc word [buffer_len]
     loop .l1
+.cond:
+    cmp word [buffer_len], 0
+    je .l1
 .end:
     mov eax, 0
     call PrintLidos
+    
+    popa
     mov eax, buffer
     movzx ebx, word [buffer_len]
     ret
 
-; eax - end. mem, ebx - length
+; end.mem./len in stack
 EscreverString:
     pusha
+    mov eax, [esp+40]
+    mov ebx, [esp+36]
     call Print
     call PrintNwln
     popa
-    ret
+    ret 8
 
-; return eax - end. mem., ebx - length
+; return eax - end. mem., ebx - length !!!!
 LerChar:
     pusha
-    mov word [buffer_len], 1
+    mov word [buffer_len], 0
+    mov byte [r_char], 0
 .l1:
     mov eax, r_char
     mov ebx, 1
     call Scan
-    cmp byte [r_char], 0ah  ; \n
-    je .l1
+    
+    cmp byte [r_char], 0ah
+    je .cond
+    cmp byte [r_char], ' '  ; 32
+    jb .l1
+    cmp byte [r_char], '}'  ; 126
+    ja .l1
     
     mov al, [r_char]
     mov [buffer], al
-    
+    inc word [buffer_len]
+.cond:
+    cmp word [buffer_len], 0
+    je .l1
+.end:
     mov eax, 0
     call PrintLidos
-
     popa
     mov eax, buffer
     movzx ebx, byte [buffer_len]
     ret
 
-; eax - end. mem
+; param in stack
 EscreverChar:
-    pusha
+    pusha   ; +32
+    mov ebp, esp
+    
+    mov eax, ebp
+    add eax, 36
     mov ebx, 1
     call Print
     call PrintNwln
-    popa
-    ret
 
-; not safe
-; return value on eax
+    mov esp, ebp
+    popa
+    ret 4
+
+; return in eax
 LerInteiro:
-    ; mov byte [r_char], 0
+    pusha             ; sub-routines need to use stack too
+    mov ebp, esp     
     mov ecx, BUFFER_MAX_SIZE
-    ; push ecx
     mov word [buffer_len], 0
+    mov byte [r_char], 0
 .l1:
     mov eax, r_char
     mov ebx, 1
     call Scan
 
-    cmp byte [r_char], 0ah
-    je .end
+    cmp byte [r_char], 0ah ; \n
+    je .cond
     cmp byte [r_char], '0'
     jb .l1
     cmp byte [r_char], '9'
@@ -320,20 +357,30 @@ LerInteiro:
     mov byte [buffer+ebx], al
     inc word [buffer_len]
     loop .l1
+.cond:
+    cmp word [buffer_len], 0
+    je .l1
 .end:
     mov eax, 1
     call PrintLidos        
-    call StringToInt
+
+    mov esp, ebp
+    popa 
+   
+    sub esp, 4          ; return value
+    call StringToInt       
+    pop eax
     ret
 
-; not safe
-; eax - value
+; param in stack
 EscreverInteiro:
-    push ebp
+    pusha
     mov ebp, esp
+    mov eax, [ebp+36]   ; param (value)
     sub esp, BUFFER_MAX_SIZE*2
-    call IntToString    ; values on stack, ebx - len
+    call IntToString    ; return values on stack, eax - len
     
+    mov ebx, eax    ; copy len
     mov ecx, 1
 .l1:
     push ecx    ; counter
@@ -355,25 +402,38 @@ EscreverInteiro:
 
     call PrintNwln
 
-    add esp, BUFFER_MAX_SIZE*2
     mov esp, ebp
-    pop ebp
-    ret
+    popa
+    ret 4
 
 _start:
-    ; call LerChar
-    ; call EscreverChar
+    mov eax, 3
+    mov ebx, 6
+    mov ecx, 9
+    mov edx, 12
+    mov ebp, 15
+
+    call LerChar ; rev
+    call LerChar ; rev
+    push word [eax]
+    call EscreverChar
     
-    ; call LerInteiro
-    ; call EscreverInteiro
+    call LerInteiro
+    push eax
+    call EscreverInteiro
     
-    call LerString
+    call LerString ; rev
+    push eax
+    push ebx
     call EscreverString
 
+    ; mov eax, 97
+    ; push eax
+    ; call EscreverChar
     exit
 
-; fazer proc de textos lerem só os ASCIIs validos.
-; proc devem usar a pilha para passagem de paramentros e retorno?
-; qual padrao seguir para colocar os regs na pilha?
-; BUG: calling multiple times scan procs make the last print show
-;   the fist scan content.
+; passagem de parametros deve ser feito utilizando a pilha (obrigatorio)
+; eax deve retornar a qtd de caracteres lidos (string)
+; Ler/Escrever String (end. mem., len)
+
+; proc devem usar a pilha para passagem de paramentros.
