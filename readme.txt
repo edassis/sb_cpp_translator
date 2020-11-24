@@ -66,3 +66,18 @@ display <variable>
 x/[type] <register>         // acessa o valor
 info b
 info l
+
+https://sourceware.org/gdb/current/onlinedocs/gdb/Memory.html
+
+
+
+
+eip
+eax
+ecx
+edx
+ebx
+esp
+ebp
+esi
+edi
