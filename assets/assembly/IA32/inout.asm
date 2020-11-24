@@ -97,6 +97,7 @@ PrintLidos:
 
     mov eax, [ebp+12]           ; ebp | eip | param2 | param1
     sub esp, BUFFER_MAX_SIZE*2  ; words
+    push eax
     call IntToString
     mov esp, eax
     shl esp, 1      ; words
@@ -139,8 +140,8 @@ PrintLidos:
     pop ebp
     ret 8
 
-; eax - value
-; values into stack, eax - len
+; stack: param1 - value
+; return: values in stack, eax - len
 IntToString:    ; stack = x return; 200 bytes
     push ebx
     push ecx
@@ -150,9 +151,10 @@ IntToString:    ; stack = x return; 200 bytes
 
     xor ecx, ecx    ; counter
 
-    push eax            ; original value
+    mov eax, dword [ebp+20]             ; original value
+    push eax             
     mov ebx, ebp                        ; base address
-    add ebx, BUFFER_MAX_SIZE*2+20       ; +16 - eip | ret
+    add ebx, BUFFER_MAX_SIZE*2+24       ; +16 - eip | param1 | ret
     push ebx
 
     cmp eax, 0      ; if value < 0
@@ -200,7 +202,7 @@ IntToString:    ; stack = x return; 200 bytes
     pop edx
     pop ecx
     pop ebx
-    ret
+    ret 4
 
 ; stack: param1 - address, param2 - len
 ; return value on stack
@@ -256,12 +258,15 @@ StringToInt:
 ; param1 - address, param2 - max. len
 ; return eax - len
 LerString:
-    pusha
+    push ebx
+    push ecx
+    push edx
+    push ebp    ; +16 - eip | param2 | param1
     mov ebp, esp
     
-    mov eax, dword [ebp+40]     ; address
+    mov eax, dword [ebp+24]     ; address
     xor ebx, ebx                ; offset
-    mov ecx, dword [ebp+36]     ; qtd to read, max = 100
+    mov ecx, dword [ebp+20]     ; qtd to read, max = 100
     cmp ecx, 0
     jle .setmax
     cmp ecx, BUFFER_MAX_SIZE
@@ -296,15 +301,20 @@ LerString:
     cmp ebx, 0
     je .l1
 .end:
-    mov dword [tmp], ebx
+    push ebx
     
     push ebx
     push dword 0
     call PrintLidos
     
+    pop ebx
+    mov eax, ebx    ; len
+
     mov esp, ebp
-    popa
-    mov eax, dword [tmp]   ; len
+    pop ebp
+    pop edx
+    pop ecx
+    pop ebx
     ret 8
 
 ; stack: param1 - end.mem., param2 - len
@@ -373,7 +383,6 @@ EscreverChar:
     popa
     ret 4
 
-; uses buffer
 ; stack: param1 - address
 ; return  eax - len
 LerInteiro:
@@ -446,6 +455,7 @@ EscreverInteiro:
     mov eax, [ebp+36]   ; param1
     mov eax, [eax]
     sub esp, BUFFER_MAX_SIZE*2
+    push eax
     call IntToString    ; return values on stack, eax - len
     mov esp, eax
     shl esp, 1      ; words
