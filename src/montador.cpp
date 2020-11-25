@@ -79,7 +79,139 @@ void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, vector<Dire
     }
 }
 
+// each key should have only one value
+map<int, string> _swap_TS(map<string, int> TS) {
+    map<int, string> res;
+    
+    for (auto &e : TS) {
+        res[e.second] = e.first;
+    }
+
+    return res;
+}
+
 void _obj_x86(ostream &out_file, AssemblyTables tables) {
+    map<int, string> label_at_address = _swap_TS(tables.TS);
+
+    // Data ----------------------------------------------
+    bool has_data = false;
+    bool has_bss = false;
+    for (Directive &direc : tables.data_table) {
+        if (direc.name == "CONST") {
+            if (!has_data) {
+                has_data = true;
+
+                out_file << "section .data\n";
+            }
+
+            string s_out = TranslationTable.at(direc.name);     // output string
+            
+            for (auto &e : direc.operands) {
+                size_t found = s_out.find('*');
+                s_out.replace(found, 1, to_string(e.value));
+            }
+            s_out = "\t" + direc.label + s_out;
+
+            out_file << s_out;
+        }
+    }
+    out_file << '\n';
+
+    for (Directive &direc : tables.data_table) {
+        if (direc.name == "SPACE") {
+            if (!has_bss) {
+                has_bss = true;
+
+                out_file << "section .bss\n";
+            }
+
+            string s_out = TranslationTable.at(direc.name);     // output string
+            
+            for (auto &e : direc.operands) {
+                size_t found = s_out.find('*');
+                s_out.replace(found, 1, to_string(e.value));
+            }
+            s_out = "\t" + direc.label + s_out;
+
+            out_file << s_out;
+        }
+    }
+    out_file << '\n';
+    
+    // Text ----------------------------------------------
+    out_file << "section .text\n";
+    out_file << "\tglobal _start\n\n";
+    out_file << "_start: ";
+    
+    
+    for (Instruction &instr : tables.text_table) {
+        // arithmetic
+        if (instr.name == "ADD" || instr.name == "SUB" || instr.name == "MULT"
+            || instr.name == "DIV") {
+            
+            string s_out = TranslationTable.at(instr.name);     // output string
+            
+            for (auto &e : instr.operands) {
+                size_t found = s_out.find('*');
+                s_out.replace(found, 1, "[" + label_at_address[e.value] + "]");
+            }
+            if (instr.label.size()) out_file << instr.label + ":\n";
+
+            out_file << s_out;
+        }
+        // jumps
+        else if (instr.name == "JMP" || instr.name == "JMPN" || instr.name == "JMPP"
+                 || instr.name == "JMPZ") {
+            string s_out = TranslationTable.at(instr.name);     // output string
+            
+            for (auto &e : instr.operands) {
+                size_t found = s_out.find('*');
+                s_out.replace(found, 1, label_at_address[e.value]);
+            }
+            if (instr.label.size()) out_file << instr.label + ":\n";
+
+            out_file << s_out;
+        }
+        // memory
+        else if (instr.name == "COPY" || instr.name == "LOAD" || instr.name == "STORE") {
+            string s_out = TranslationTable.at(instr.name);     // output string
+            
+            for (auto &e : instr.operands) {
+                size_t found = s_out.find('*');
+                s_out.replace(found, 1, "[" + label_at_address[e.value] + "]");
+            }
+            if (instr.label.size()) out_file << instr.label + ":\n";
+
+            out_file << s_out;
+        }
+        // i/o
+        else if (instr.name == "INPUT" || instr.name == "OUTPUT"
+                 || instr.name == "C_INPUT" || instr.name == "C_OUTPUT" 
+                 || instr.name == "S_INPUT" || instr.name == "S_OUTPUT") {
+            string s_out = TranslationTable.at(instr.name);     // output string
+            
+            for (auto &e : instr.operands) {
+                size_t found = s_out.find('*');
+                
+                if (e.type == ParamType::EndMem) {
+                    s_out.replace(found, 1, label_at_address[e.value]);
+                } else if (e.type == ParamType::Immediate) {
+                    s_out.replace(found, 1, to_string(e.value));
+                }
+            }
+            if (instr.label.size()) out_file << instr.label + ":\n";
+
+            out_file << s_out;
+        }
+        // stop
+        else if (instr.name == "STOP") {
+            string s_out = TranslationTable.at(instr.name);     // output string
+            out_file << s_out;
+        }
+        else {
+            cout << "ERRO! Instrução não pode ser traduzida." << endl;
+        }
+    }
 }
 
 bool _get_instr(ifstream &in_file, RawInstruction &raw_instr, int &line) {
@@ -581,6 +713,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
                     if (!label.empty()) {
                         if (TS.count(label) == 0) {
                             Directive direc;
+                            direc.label = label;
                             bool is_valid = true;
 
                             if (TD.count(command)) {
@@ -596,7 +729,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                             if (command == "SPACE") {
                                                 for (int i = 0; i < aux; i++) {
                                                     Param defined_param;
-                                                    defined_param.type = ParamType::Imediate; defined_param.value = 0;
+                                                    defined_param.type = ParamType::Immediate; defined_param.value = 0;
                                                     
                                                     direc.operands.emplace_back(defined_param);
                                                 }
@@ -605,7 +738,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                             
                                             } else if (command == "CONST") {
                                                 Param defined_param;
-                                                defined_param.type = ParamType::Imediate; defined_param.value = aux;
+                                                defined_param.type = ParamType::Immediate; defined_param.value = aux;
                                                 
                                                 direc.operands.emplace_back(defined_param);
                                             }
@@ -625,7 +758,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                     }
                                 } else if (command == "SPACE") {    // SPACE supports 0/1 params
                                     Param defined_param;
-                                    defined_param.type = ParamType::Imediate; defined_param.value = 0;
+                                    defined_param.type = ParamType::Immediate; defined_param.value = 0;
                                     
                                     direc.operands.emplace_back(defined_param);
                                 } else if (TD.at(command).qtd_operands != param.size()) {
@@ -660,11 +793,12 @@ AssemblyTables generate_tables(ifstream &in_file) {
                     if (!command.empty()) {
                         if (TI.count(command) > 0) {
                             Instruction instr = TI.at(command);
+                            instr.label = label;
 /////////////////////// NOVIDADE
                             vector<pair<string, int>> inc_param;        // parameters to include (label, imediate)
 
-
-                            for (unsigned i = 0; i < param.size(); i++) {   // determine if params have increment and put this on s_param vector
+                            // determine if params have increment and put this on s_param vector
+                            for (unsigned i = 0; i < param.size(); i++) {
                                 pair<string, int> n_param;      // new parameter
                                 n_param.first = "", n_param.second = 0;
                                 bool valid = true;
@@ -711,7 +845,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                                 valid_param = false;
                                             }
                                         } else {    // imediate
-                                            defined_param.type = ParamType::Imediate; defined_param.value = inc_param[i].second;
+                                            defined_param.type = ParamType::Immediate; defined_param.value = inc_param[i].second;
                                             instr.operands.emplace_back(defined_param);
                                         }
                                     }
@@ -779,6 +913,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
     if (!fatal_error) {
         assembly_table.text_table = text_table;
         assembly_table.data_table = data_table;
+        assembly_table.TS = TS;
     } else {
         cout << "Erro! Nao foi possivel gerar as tabelas de compilacao." << endl;
     }

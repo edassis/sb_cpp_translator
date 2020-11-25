@@ -31,7 +31,7 @@ enum class InstType {
  */
 enum class ParamType {
     EndMem,
-    Imediate
+    Immediate
 };
 
 /**
@@ -76,13 +76,17 @@ struct RawInstruction {
  * 
  */
 struct Instruction {
+    string label;
+    string name;
     size_t qtd_operands;
     int opcode;
     int length;  // bytes
 
     vector<Param> operands;  // end. mem or imediate
 
-    Instruction(int qtd_operands, int opcode, int length/* , vector<Param> operands */) /* : operands(operands) */{
+    Instruction(string label, string name, int qtd_operands, int opcode, int length/* , vector<Param> operands */) /* : operands(operands) */{
+        this->label = label;
+        this->name = name;
         this->qtd_operands = qtd_operands;
         this->opcode = opcode;
         this->length = length;
@@ -95,20 +99,23 @@ struct Instruction {
  * 
  */
 struct Directive {
+    string label;
+    string name;
     size_t qtd_operands;
     int length;
 
     vector<Param> operands;
 
-    Directive(int qtd_operands = 0, int length = 0) : qtd_operands(qtd_operands), length(length){};
+    Directive(string label = "", string name = "", int qtd_operands = 0, int length = 0) : name(name), qtd_operands(qtd_operands), length(length){};
 };
 
 struct AssemblyTables {
     vector<Instruction> text_table;
     vector<Directive> data_table;
+    map<string, int> TS;
 
     bool empty() {
-        return text_table.empty() && data_table.empty();
+        return text_table.empty() && data_table.empty() && !TS.size();
     }
 };
 
@@ -118,28 +125,28 @@ struct AssemblyTables {
  */
 const map<string, Instruction> TI{
     // {"ADD", Instruction(1, 1, 2, {{ParamType::EndMem, 0}, {ParamType::EndMem, 0}})},      // operands, op, len
-    {"ADD", Instruction(1, 1, 2)},      // operands, op, len
-    {"SUB", Instruction(1, 2, 2)},
-    {"MULT", Instruction(1, 3, 2)},
-    {"DIV", Instruction(1, 4, 2)},
+    {"ADD", Instruction("", "ADD"   , 1, 1, 2)},      // operands, op, len
+    {"SUB", Instruction("", "SUB"   , 1, 2, 2)},
+    {"MULT", Instruction("", "MULT" , 1, 3, 2)},
+    {"DIV", Instruction("", "DIV"   , 1, 4, 2)},
 
-    {"JMP", Instruction(1, 5, 2)},
-    {"JMPN", Instruction(1, 6, 2)},
-    {"JMPP", Instruction(1, 7, 2)},
-    {"JMPZ", Instruction(1, 8, 2)},
+    {"JMP", Instruction("", "JMP"   , 1, 5, 2)},
+    {"JMPN", Instruction("", "JMPN" , 1, 6, 2)},
+    {"JMPP", Instruction("", "JMPP" , 1, 7, 2)},
+    {"JMPZ", Instruction("", "JMPZ" , 1, 8, 2)},
 
-    {"COPY", Instruction(2, 9, 3)},
-    {"LOAD", Instruction(1, 10, 2)},
-    {"STORE", Instruction(1, 11, 2)},
-    {"INPUT", Instruction(1, 12, 2)},
-    {"INPUT", Instruction(1, 12, 2)},
-    {"OUTPUT", Instruction(1, 13, 2)},
-    {"C_INPUT", Instruction(1, 15, 2)},     // label
-    {"C_OUTPUT", Instruction(1, 16, 2)},
-    {"S_INPUT", Instruction(2, 19, 3)},     // label, length (max 100)
-    {"S_OUTPUT", Instruction(2, 20, 3)},
+    {"COPY", Instruction("", "COPY"         , 2, 9, 3)},
+    {"LOAD", Instruction("", "LOAD"         , 1, 10, 2)},
+    {"STORE", Instruction("", "STORE"       , 1, 11, 2)},
 
-    {"STOP", Instruction(0, 14, 1)},
+    {"INPUT", Instruction("", "INPUT"       , 1, 12, 2)},
+    {"OUTPUT", Instruction("", "OUTPUT"     , 1, 13, 2)},
+    {"C_INPUT", Instruction("", "C_INPUT"   , 1, 15, 2)},     // label
+    {"C_OUTPUT", Instruction("", "C_OUTPUT" , 1, 16, 2)},
+    {"S_INPUT", Instruction("", "S_INPUT"   , 2, 19, 3)},     // label, length (max 100)
+    {"S_OUTPUT", Instruction("", "S_OUTPUT" , 2, 20, 3)},
+
+    {"STOP", Instruction("", "STOP", 0, 14, 1)},
 };
 
 /**
@@ -147,13 +154,119 @@ const map<string, Instruction> TI{
  * 
  */
 const map<string, Directive> TD{
-    {"EQU", Directive(1, 0)},  // at the beginning
-    {"SECTION", Directive(1, 0)},
-    {"MACRO", Directive(0, 0)},  // TEXT
-    {"ENDMACRO", Directive(0, 0)},
-    {"IF", Directive(1, 0)},     // TEXT
-    {"SPACE", Directive(1, 1)},  // DATA
-    {"CONST", Directive(1, 1)}   // DATA
+    {"EQU", Directive("", "EQU",            1, 0)},  // at the beginning
+    {"SECTION", Directive("", "SECTION",    1, 0)},
+    {"MACRO", Directive("", "MACRO",        0, 0)},  // TEXT
+    {"ENDMACRO", Directive("", "ENDMACRO",  0, 0)},
+    {"IF", Directive("", "IF",              1, 0)},     // TEXT
+    {"SPACE", Directive("", "SPACE",        1, 1)},  // DATA
+    {"CONST", Directive("", "CONST",        1, 1)}   // DATA
 };
 
+// command, output
+const map<string, string> TranslationTable {    // * - operands
+    // Instructions
+    {   // ADD
+        "ADD",
+            "\tadd eax, dword *\n"    // [var]
+    },
+    {   // SUB
+        "SUB",
+            "\tsub eax, dword *\n"
+    },
+    {   // MULT
+        "MULT",
+            "\tcdq\n"
+            "\tmov ebx, dword *\n"
+            "\timul ebx\n"
+            "\tcmp edx, 0\n"
+            "\tjne Overflown\n"
+    },
+    {   // DIV
+        "DIV",
+            "\tcdq\n"
+            "\tmov ebx, dword *\n"
+            "\tidiv ebx\n"
+    },
+    {   // JMP
+        "JMP",
+            "\tjmp *\n"       // label
+    },
+    {   // JMPN
+        "JMPN",
+            "\tcmp eax, 0\n"
+            "\tjl *\n"
+    },
+    {   // JMPP
+        "JMPP",
+            "\tcmp eax, 0\n"
+            "\tjg *\n"
+    },
+    {   // JMPZ
+        "JMPZ",
+            "\tcmp eax, 0\n"
+            "\tje *\n"        
+    },
+    {   // COPY
+        "COPY",
+            "\tmov ebx, dword *\n"    // param1 - [src var]
+            "\tmov dword *, ebx\n"    // param2 - [dst var]
+    },
+    {
+        "LOAD",
+            "\tmov eax, dword *\n"    // [var]
+    },
+    {
+        "STORE",
+            "\tmov dword *, eax\n"
+    },
+    {
+        "INPUT",
+            "\tpush *\n"                // var name
+            "\tcall LerInteiro\n"
+    },
+    {
+        "OUTPUT",
+            "\tpush *\n"
+            "\tcall EscreverInteiro\n"
+    },
+    {
+        "C_INPUT",
+            "\tpush *\n"
+            "\tcall LerChar\n"
+    },
+    {
+        "C_OUTPUT",
+            "\tpush *\n"
+            "\tcall EscreverChar\n"
+    },
+    {
+        "S_INPUT",
+            "\tpush *\n"          // var name
+            "\tpush *\n"          // len
+            "\tcall LerString\n"
+    },
+    {
+        "S_OUTPUT",
+            "\tpush *\n"
+            "\tpush *\n"
+            "\tcall EscreverString\n"
+    },
+    {
+        "STOP",
+            "\tmov eax, 1\n"
+            "\tmov ebx, 0\n"
+            "\tint 80h\n"
+    },
+
+    // DIRECTIVES
+    {
+        "SPACE",
+            "resd *\n"      // qtd | <label> ...
+    },
+    {
+        "CONST",
+            "dd *\n"        // initial value | <label> ...
+    }
+};
 #endif

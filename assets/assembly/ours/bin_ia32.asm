@@ -3,7 +3,7 @@
 ; --------------------
 SECTION TEXT
 ; section .text
-    INPUT OLD_DATA  ; was to be LerChat, but we know that he wants to get integers
+    INPUT OLD_DATA
     ; push OLD_DATA
     ; call LerInteiro
     LOAD OLD_DATA               ; 6
