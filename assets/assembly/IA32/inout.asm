@@ -43,6 +43,8 @@ section .data
     msg_nums db " algarismos.",0
     MSG_NUMS_SIZE equ $-msg_nums
 
+    msg_overflow db "Overflow! Finalizando o programa...",0
+    MSG_OVERFLOW_SIZE equ $-msg_overflow
     BUFFER_MAX_SIZE equ 100
     buffer_len dw 0
 
@@ -53,6 +55,14 @@ section .bss
 
 section .text
     global _start
+
+; finishes execution
+Overflow:
+    mov eax, msg_overflow
+    mov ebx, MSG_OVERFLOW_SIZE
+    call Print
+    call PrintNwln
+    exit
 
 ; not safe
 ; eax - end. mem
@@ -483,7 +493,8 @@ EscreverInteiro:
     popa
     ret 4
 
-_start:
+
+test:
     mov eax, 3
     mov ebx, 6
     mov ecx, 9
@@ -525,4 +536,42 @@ _start:
     xor edi, edi
     exit
 
-; implementar overflow
+;; binary conversion
+section .data
+    DOIS dd 2
+
+section .bss
+    OLD_DATA resd 1
+    NEW_DATA resd 1
+    TMP_DATA resd 1
+
+section .text
+_start:
+    push OLD_DATA
+    call LerInteiro
+    mov eax, dword [OLD_DATA]
+
+L1: cdq
+    mov ebx, dword [DOIS]
+    idiv ebx
+    mov dword [NEW_DATA], eax
+    cdq
+    mov ebx, dword [DOIS]
+    imul ebx
+    cmp edx, 0
+    jne Overflow
+    mov dword [TMP_DATA], eax
+    mov eax, dword [OLD_DATA] 
+    sub eax, dword [TMP_DATA]
+    mov dword [TMP_DATA], eax
+    push TMP_DATA
+    call EscreverInteiro
+    mov ebx, dword [NEW_DATA]
+    mov dword [OLD_DATA], ebx
+    mov eax, dword [OLD_DATA]
+    cmp eax, 0
+    jg L1
+    
+    mov eax, 1
+    mov ebx, 0
+    int 80h
