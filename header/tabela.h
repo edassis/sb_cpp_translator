@@ -39,8 +39,9 @@ enum class ParamType {
  * 
  */
 struct Param {
-    ParamType type;
-    int value;
+    ParamType type = ParamType::EndMem;
+    int value = 0;
+    int offset = 0;
 };
 
 /**
@@ -84,8 +85,7 @@ struct Instruction {
 
     vector<Param> operands;  // end. mem or imediate
 
-    Instruction(string label, string name, int qtd_operands, int opcode, int length/* , vector<Param> operands */) /* : operands(operands) */{
-        this->label = label;
+    Instruction(string name, int qtd_operands, int opcode, int length/* , vector<Param> operands */) /* : operands(operands) */{
         this->name = name;
         this->qtd_operands = qtd_operands;
         this->opcode = opcode;
@@ -106,7 +106,7 @@ struct Directive {
 
     vector<Param> operands;
 
-    Directive(string label = "", string name = "", int qtd_operands = 0, int length = 0) : name(name), qtd_operands(qtd_operands), length(length){};
+    Directive(string name = "", int qtd_operands = 0, int length = 0) : name(name), qtd_operands(qtd_operands), length(length){};
 };
 
 struct AssemblyTables {
@@ -125,28 +125,28 @@ struct AssemblyTables {
  */
 const map<string, Instruction> TI{
     // {"ADD", Instruction(1, 1, 2, {{ParamType::EndMem, 0}, {ParamType::EndMem, 0}})},      // operands, op, len
-    {"ADD", Instruction("", "ADD"   , 1, 1, 2)},      // operands, op, len
-    {"SUB", Instruction("", "SUB"   , 1, 2, 2)},
-    {"MULT", Instruction("", "MULT" , 1, 3, 2)},
-    {"DIV", Instruction("", "DIV"   , 1, 4, 2)},
+    {"ADD", Instruction("ADD"   , 1, 1, 2)},      // operands, op, len
+    {"SUB", Instruction("SUB"   , 1, 2, 2)},
+    {"MULT", Instruction("MULT" , 1, 3, 2)},
+    {"DIV", Instruction("DIV"   , 1, 4, 2)},
 
-    {"JMP", Instruction("", "JMP"   , 1, 5, 2)},
-    {"JMPN", Instruction("", "JMPN" , 1, 6, 2)},
-    {"JMPP", Instruction("", "JMPP" , 1, 7, 2)},
-    {"JMPZ", Instruction("", "JMPZ" , 1, 8, 2)},
+    {"JMP", Instruction("JMP"   , 1, 5, 2)},
+    {"JMPN", Instruction("JMPN" , 1, 6, 2)},
+    {"JMPP", Instruction("JMPP" , 1, 7, 2)},
+    {"JMPZ", Instruction("JMPZ" , 1, 8, 2)},
 
-    {"COPY", Instruction("", "COPY"         , 2, 9, 3)},
-    {"LOAD", Instruction("", "LOAD"         , 1, 10, 2)},
-    {"STORE", Instruction("", "STORE"       , 1, 11, 2)},
+    {"COPY", Instruction("COPY"         , 2, 9, 3)},
+    {"LOAD", Instruction("LOAD"         , 1, 10, 2)},
+    {"STORE", Instruction("STORE"       , 1, 11, 2)},
 
-    {"INPUT", Instruction("", "INPUT"       , 1, 12, 2)},
-    {"OUTPUT", Instruction("", "OUTPUT"     , 1, 13, 2)},
-    {"C_INPUT", Instruction("", "C_INPUT"   , 1, 15, 2)},     // label
-    {"C_OUTPUT", Instruction("", "C_OUTPUT" , 1, 16, 2)},
-    {"S_INPUT", Instruction("", "S_INPUT"   , 2, 19, 3)},     // label, length (max 100)
-    {"S_OUTPUT", Instruction("", "S_OUTPUT" , 2, 20, 3)},
+    {"INPUT", Instruction("INPUT"       , 1, 12, 2)},
+    {"OUTPUT", Instruction("OUTPUT"     , 1, 13, 2)},
+    {"C_INPUT", Instruction("C_INPUT"   , 1, 15, 2)},     // label
+    {"C_OUTPUT", Instruction("C_OUTPUT" , 1, 16, 2)},
+    {"S_INPUT", Instruction("S_INPUT"   , 2, 19, 3)},     // label, length (max 100)
+    {"S_OUTPUT", Instruction("S_OUTPUT" , 2, 20, 3)},
 
-    {"STOP", Instruction("", "STOP", 0, 14, 1)},
+    {"STOP", Instruction("STOP", 0, 14, 1)},
 };
 
 /**
@@ -154,60 +154,59 @@ const map<string, Instruction> TI{
  * 
  */
 const map<string, Directive> TD{
-    {"EQU", Directive("", "EQU",            1, 0)},  // at the beginning
-    {"SECTION", Directive("", "SECTION",    1, 0)},
-    {"MACRO", Directive("", "MACRO",        0, 0)},  // TEXT
-    {"ENDMACRO", Directive("", "ENDMACRO",  0, 0)},
-    {"IF", Directive("", "IF",              1, 0)},     // TEXT
-    {"SPACE", Directive("", "SPACE",        1, 1)},  // DATA
-    {"CONST", Directive("", "CONST",        1, 1)}   // DATA
+    {"EQU", Directive("EQU",            1, 0)},  // at the beginning
+    {"SECTION", Directive("SECTION",    1, 0)},
+    {"MACRO", Directive("MACRO",        0, 0)},  // TEXT
+    {"ENDMACRO", Directive("ENDMACRO",  0, 0)},
+    {"IF", Directive("IF",              1, 0)},     // TEXT
+    {"SPACE", Directive("SPACE",        1, 1)},  // DATA
+    {"CONST", Directive("CONST",        1, 1)}   // DATA
 };
 
 // command, output
 const map<string, string> TranslationTable {    // * - operands
     // Instructions
-    {   // ADD
+    {
         "ADD",
             "\tadd eax, dword *\n"    // [var]
     },
-    {   // SUB
+    {
         "SUB",
             "\tsub eax, dword *\n"
     },
-    {   // MULT
+    {
         "MULT",
             "\tcdq\n"
             "\tmov ebx, dword *\n"
             "\timul ebx\n"
-            "\tcmp edx, 0\n"
-            "\tjne Overflown\n"
+            "\tjo Overflow\n"
     },
-    {   // DIV
+    {
         "DIV",
             "\tcdq\n"
             "\tmov ebx, dword *\n"
             "\tidiv ebx\n"
     },
-    {   // JMP
+    { 
         "JMP",
             "\tjmp *\n"       // label
     },
-    {   // JMPN
+    { 
         "JMPN",
             "\tcmp eax, 0\n"
             "\tjl *\n"
     },
-    {   // JMPP
+    { 
         "JMPP",
             "\tcmp eax, 0\n"
             "\tjg *\n"
     },
-    {   // JMPZ
+    {
         "JMPZ",
             "\tcmp eax, 0\n"
             "\tje *\n"        
     },
-    {   // COPY
+    {
         "COPY",
             "\tmov ebx, dword *\n"    // param1 - [src var]
             "\tmov dword *, ebx\n"    // param2 - [dst var]

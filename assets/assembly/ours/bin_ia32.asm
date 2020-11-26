@@ -7,12 +7,12 @@ SECTION TEXT
     ; push OLD_DATA
     ; call LerInteiro
     LOAD OLD_DATA               ; 6
-    ; mov ax, word [OLD_DATA]
+    ; mov eax, dword [OLD_DATA]
 
 L1: DIV DOIS                    ; 3 = OLD_DATA / 2
 ; L1: cdq
     ; mov ebx, dword [DOIS]
-    ; idiv bx
+    ; idiv ebx
     STORE  NEW_DATA             ; new_data = 3
     ; mov dword [NEW_DATA], eax
     MULT DOIS                   ; 6 = 3 * 2

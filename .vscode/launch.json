@@ -8,10 +8,10 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/a.out",
+            "program": "${workspaceFolder}/montador",
             "args": [
-                "-op",
-                "assets/assembly/ours/bin_c.PRE"
+                "-x86",
+                "assets/assembly/ours/bin.asm"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

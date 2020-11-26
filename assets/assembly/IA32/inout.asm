@@ -1,6 +1,7 @@
 ; global LerInteiro, EscreverInteiro
 ; global LerChar, EscreverChar
 ; global LerString, EscreverString
+; global Overflow
 
 SYS_EXIT equ 1
 SYS_READ equ 3
@@ -15,26 +16,9 @@ KERNEL_CALL equ 80h
     int 80h
 %endmacro
 
-; use only when accessing memory
-%macro print 2  
-    mov eax, SYS_WRITE      ; syscall
-    mov ebx, STDOUT          ; file descriptor
-    mov ecx, %1             ; end. msg
-    mov edx, %2             ; len
-    int KERNEL_CALL         ; interruption
-%endmacro
-
-%macro scan 2
-    mov eax, SYS_READ      ; syscall
-    mov ebx, STDIN          ; file descriptor
-    mov ecx, %1             ; dst end.
-    mov edx, %2             ; len
-    int KERNEL_CALL         ; interruption
-%endmacro
-
 section .data
     nwln        db      0dh, 0ah
-    NWLN_SIZE    EQU     $-nwln
+    NWLN_SIZE    equ     $-nwln
 
     msg1 db "Foram lidos ",
     MSG1_SIZE equ $-msg1
@@ -45,6 +29,7 @@ section .data
 
     msg_overflow db "Overflow! Finalizando o programa...",0
     MSG_OVERFLOW_SIZE equ $-msg_overflow
+    
     BUFFER_MAX_SIZE equ 100
     buffer_len dw 0
 
@@ -54,20 +39,20 @@ section .bss
     tmp    resd 10
 
 section .text
-    global _start
+    ; global _start
 
 ; finishes execution
 Overflow:
     mov eax, msg_overflow
     mov ebx, MSG_OVERFLOW_SIZE
-    call Print
-    call PrintNwln
+    call _Print
+    call _PrintNwln
     exit
 
 ; not safe
 ; eax - end. mem
 ; ebx - len
-Print:
+_Print:
     mov ecx, eax
     mov edx, ebx
     mov eax, SYS_WRITE      ; syscall
@@ -78,7 +63,7 @@ Print:
 ; not safe
 ; eax - end. mem
 ; ebx - len
-Scan:
+_Scan:
     mov ecx, eax    ; len
     mov edx, ebx
     mov eax, SYS_READ      ; syscall
@@ -87,7 +72,7 @@ Scan:
     ret
 
 ; not safe
-PrintNwln:
+_PrintNwln:
     mov eax, SYS_WRITE       ; syscall
     mov ebx, STDOUT          ; file descriptor
     mov ecx, nwln            ; end.
@@ -97,18 +82,18 @@ PrintNwln:
 
 ; not safe
 ; stack param1 = qtd, param2 = 0/1
-PrintLidos:
+_PrintLidos:
     push ebp
     mov ebp, esp
     
     mov eax, msg1
     mov ebx, MSG1_SIZE
-    call Print
+    call _Print
 
     mov eax, [ebp+12]           ; ebp | eip | param2 | param1
     sub esp, BUFFER_MAX_SIZE*2  ; words
     push eax
-    call IntToString
+    call _IntToString
     mov esp, eax
     shl esp, 1      ; words
     neg esp
@@ -137,14 +122,14 @@ PrintLidos:
 .chars: ; eax - 0
     mov eax, msg_chars
     mov ebx, MSG_CHARS_SIZE
-    call Print
+    call _Print
     jmp .end
 .nums: ; eax - 1
     mov eax, msg_nums
     mov ebx, MSG_NUMS_SIZE
-    call Print
+    call _Print
 .end:
-    call PrintNwln
+    call _PrintNwln
 
     mov esp, ebp
     pop ebp
@@ -152,7 +137,7 @@ PrintLidos:
 
 ; stack: param1 - value
 ; return: values in stack, eax - len
-IntToString:    ; stack = x return; 200 bytes
+_IntToString:    ; stack = x return; 200 bytes
     push ebx
     push ecx
     push edx
@@ -216,7 +201,7 @@ IntToString:    ; stack = x return; 200 bytes
 
 ; stack: param1 - address, param2 - len
 ; return value on stack
-StringToInt: 
+_StringToInt: 
     pusha       ; +32
     mov ebp, esp
 
@@ -290,7 +275,7 @@ LerString:
     
     mov eax, r_char
     mov ebx, 1
-    call Scan
+    call _Scan
     
     pop ecx                 ; unstack before jump
     pop ebx
@@ -315,7 +300,7 @@ LerString:
     
     push ebx
     push dword 0
-    call PrintLidos
+    call _PrintLidos
     
     pop ebx
     mov eax, ebx    ; len
@@ -332,8 +317,8 @@ EscreverString:
     pusha
     mov eax, [esp+40]
     mov ebx, [esp+36]
-    call Print
-    call PrintNwln
+    call _Print
+    call _PrintNwln
     popa
     ret 8
 
@@ -351,7 +336,7 @@ LerChar:
 
     mov eax, r_char
     mov ebx, 1
-    call Scan
+    call _Scan
 
     pop ecx
     pop eax
@@ -372,7 +357,7 @@ LerChar:
 .end:
     push dword 1
     push dword 0
-    call PrintLidos
+    call _PrintLidos
 
     mov esp, ebp
     popa
@@ -386,8 +371,8 @@ EscreverChar:
     
     mov eax, [ebp+36]
     mov ebx, 1
-    call Print
-    call PrintNwln
+    call _Print
+    call _PrintNwln
 
     mov esp, ebp
     popa
@@ -409,7 +394,7 @@ LerInteiro:
 
     mov eax, r_char
     mov ebx, 1
-    call Scan
+    call _Scan
 
     pop ecx
     pop ebx
@@ -437,7 +422,7 @@ LerInteiro:
 
     push ecx            ; params
     push dword 0
-    call PrintLidos        
+    call _PrintLidos        
 
     pop ecx
     pop ebx
@@ -445,7 +430,7 @@ LerInteiro:
     sub esp, 4          ; return space
     push ebx            ; address
     push ecx
-    call StringToInt       
+    call _StringToInt       
     pop eax             ; int value
     mov [ebx], eax      ; putting value in param1 address
 
@@ -462,11 +447,11 @@ LerInteiro:
 EscreverInteiro:
     pusha
     mov ebp, esp
-    mov eax, [ebp+36]   ; param1
-    mov eax, [eax]
+    mov eax, dword [ebp+36]   ; param1
+    mov eax, dword [eax]
     sub esp, BUFFER_MAX_SIZE*2
     push eax
-    call IntToString    ; return values on stack, eax - len
+    call _IntToString    ; return values on stack, eax - len
     mov esp, eax
     shl esp, 1      ; words
     neg esp
@@ -479,7 +464,7 @@ EscreverInteiro:
     push ecx
 
     mov ebx, 1      ; print len 1
-    call Print
+    call _Print
     
     pop ecx
     pop eax
@@ -487,14 +472,15 @@ EscreverInteiro:
     add eax, 2      ; next element
     loop .l1
 
-    call PrintNwln
+    call _PrintNwln
 
     mov esp, ebp
     popa
     ret 4
 
-
-test:
+; ------------------------------------
+; Tests for the procedures
+; _start:       
     mov eax, 3
     mov ebx, 6
     mov ecx, 9
@@ -536,42 +522,4 @@ test:
     xor edi, edi
     exit
 
-;; binary conversion
-section .data
-    DOIS dd 2
-
-section .bss
-    OLD_DATA resd 1
-    NEW_DATA resd 1
-    TMP_DATA resd 1
-
-section .text
-_start:
-    push OLD_DATA
-    call LerInteiro
-    mov eax, dword [OLD_DATA]
-
-L1: cdq
-    mov ebx, dword [DOIS]
-    idiv ebx
-    mov dword [NEW_DATA], eax
-    cdq
-    mov ebx, dword [DOIS]
-    imul ebx
-    cmp edx, 0
-    jne Overflow
-    mov dword [TMP_DATA], eax
-    mov eax, dword [OLD_DATA] 
-    sub eax, dword [TMP_DATA]
-    mov dword [TMP_DATA], eax
-    push TMP_DATA
-    call EscreverInteiro
-    mov ebx, dword [NEW_DATA]
-    mov dword [OLD_DATA], ebx
-    mov eax, dword [OLD_DATA]
-    cmp eax, 0
-    jg L1
-    
-    mov eax, 1
-    mov ebx, 0
-    int 80h
+; -------------------------------------------------

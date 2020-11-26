@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
             cout << "Erro! Falha ao criar arquivo: " << out_file_name << endl;
             return 0;
         }
-        pre_process_basic(in_file, out_file);
+        pre_process(in_file, out_file);
         cout << "> Gerado arquivo \"" << out_file_name << "\"" << endl;
         out_file.close();
     
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
         out_file.close();
         
         if (success)
-            cout << "> Gerado arquivo \"" << out_file_name << "\"" << endl;
+            cout << "> Arquivo \"" << out_file_name << "\" gerado." << endl;
         else
             remove(out_file_name.c_str());
     }
@@ -188,3 +188,7 @@ int main(int argc, char **argv) {
 
     return 0;
 }
+
+// modularizar codigo (como importar no assembly)
+// testar funções de string, char
+// sub, jmpn, jmp, jmpn, jmpz, s_input, s_output
