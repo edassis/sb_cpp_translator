@@ -17,34 +17,33 @@ KERNEL_CALL equ 80h
 %endmacro
 
 section .data
-    nwln        db      0dh, 0ah
-    NWLN_SIZE    equ     $-nwln
+    _nwln        db      0dh, 0ah
+    _NWLN_SIZE    equ     $-_nwln
 
-    msg1 db "Foram lidos ",
-    MSG1_SIZE equ $-msg1
-    msg_chars db " caracteres.",0
-    MSG_CHARS_SIZE equ $-msg_chars
-    msg_nums db " algarismos.",0
-    MSG_NUMS_SIZE equ $-msg_nums
+    _msg1 db "Foram lidos ",
+    _MSG1_SIZE equ $-_msg1
+    _msg_chars db " caracteres.",0
+    _MSG_CHARS_SIZE equ $-_msg_chars
+    _msg_nums db " algarismos.",0
+    _MSG_NUMS_SIZE equ $-_msg_nums
 
-    msg_overflow db "Overflow! Finalizando o programa...",0
-    MSG_OVERFLOW_SIZE equ $-msg_overflow
+    _msg_overflow db "Overflow! Finalizando o programa...",0
+    _MSG_OVERFLOW_SIZE equ $-_msg_overflow
     
-    BUFFER_MAX_SIZE equ 100
-    buffer_len dw 0
+    _BUFFER_MAX_SIZE equ 100
 
 section .bss
-    buffer  resb 100
-    r_char  resb 1
-    tmp    resd 10
+    _buffer  resb 100
+    _r_char  resb 1
+    _tmp    resd 10
 
 section .text
     ; global _start
 
 ; finishes execution
 Overflow:
-    mov eax, msg_overflow
-    mov ebx, MSG_OVERFLOW_SIZE
+    mov eax, _msg_overflow
+    mov ebx, _MSG_OVERFLOW_SIZE
     call _Print
     call _PrintNwln
     exit
@@ -75,8 +74,8 @@ _Scan:
 _PrintNwln:
     mov eax, SYS_WRITE       ; syscall
     mov ebx, STDOUT          ; file descriptor
-    mov ecx, nwln            ; end.
-    mov edx, NWLN_SIZE       ; len
+    mov ecx, _nwln            ; end.
+    mov edx, _NWLN_SIZE       ; len
     int KERNEL_CALL         ; interruption
     ret
 
@@ -86,12 +85,12 @@ _PrintLidos:
     push ebp
     mov ebp, esp
     
-    mov eax, msg1
-    mov ebx, MSG1_SIZE
+    mov eax, _msg1
+    mov ebx, _MSG1_SIZE
     call _Print
 
     mov eax, [ebp+12]           ; ebp | eip | param2 | param1
-    sub esp, BUFFER_MAX_SIZE*2  ; words
+    sub esp, _BUFFER_MAX_SIZE*2  ; words
     push eax
     call _IntToString
     mov esp, eax
@@ -120,13 +119,13 @@ _PrintLidos:
     cmp eax, 1
     je .nums
 .chars: ; eax - 0
-    mov eax, msg_chars
-    mov ebx, MSG_CHARS_SIZE
+    mov eax, _msg_chars
+    mov ebx, _MSG_CHARS_SIZE
     call _Print
     jmp .end
 .nums: ; eax - 1
-    mov eax, msg_nums
-    mov ebx, MSG_NUMS_SIZE
+    mov eax, _msg_nums
+    mov ebx, _MSG_NUMS_SIZE
     call _Print
 .end:
     call _PrintNwln
@@ -149,7 +148,7 @@ _IntToString:    ; stack = x return; 200 bytes
     mov eax, dword [ebp+20]             ; original value
     push eax             
     mov ebx, ebp                        ; base address
-    add ebx, BUFFER_MAX_SIZE*2+24       ; +16 - eip | param1 | ret
+    add ebx, _BUFFER_MAX_SIZE*2+24       ; +16 - eip | param1 | ret
     push ebx
 
     cmp eax, 0      ; if value < 0
@@ -169,7 +168,7 @@ _IntToString:    ; stack = x return; 200 bytes
     mov ebx, [ebp-8]
     mov word [ebx+edi], dx   ; ret base address *(ebp-8) + offset
     
-    cmp ecx, BUFFER_MAX_SIZE
+    cmp ecx, _BUFFER_MAX_SIZE
     jg .negative2             ; obs: overflow in the future
 .quo:
     cmp eax, 0    
@@ -264,16 +263,16 @@ LerString:
     mov ecx, dword [ebp+20]     ; qtd to read, max = 100
     cmp ecx, 0
     jle .setmax
-    cmp ecx, BUFFER_MAX_SIZE
+    cmp ecx, _BUFFER_MAX_SIZE
     jle .l1
 .setmax:
-    mov ecx, BUFFER_MAX_SIZE
+    mov ecx, _BUFFER_MAX_SIZE
 .l1:
     push eax
     push ebx
     push ecx
     
-    mov eax, r_char
+    mov eax, _r_char
     mov ebx, 1
     call _Scan
     
@@ -281,14 +280,14 @@ LerString:
     pop ebx
     pop eax
 
-    cmp byte [r_char], 0ah
+    cmp byte [_r_char], 0ah
     je .cond
-    cmp byte [r_char], ' '  ; space 32
+    cmp byte [_r_char], ' '  ; space 32
     jb .l1
-    cmp byte [r_char], '~'  ; 126
+    cmp byte [_r_char], '~'  ; 126
     ja .l1
 
-    mov dl, [r_char]
+    mov dl, [_r_char]
     mov [eax+ebx], dl   ; buffer[i] = char
     inc ebx
     loop .l1
@@ -334,21 +333,21 @@ LerChar:
     push eax
     push ecx
 
-    mov eax, r_char
+    mov eax, _r_char
     mov ebx, 1
     call _Scan
 
     pop ecx
     pop eax
 
-    cmp byte [r_char], 0ah
+    cmp byte [_r_char], 0ah
     je .cond
-    cmp byte [r_char], ' '  ; 32
+    cmp byte [_r_char], ' '  ; 32
     jb .l1
-    cmp byte [r_char], '}'  ; 126
+    cmp byte [_r_char], '}'  ; 126
     ja .l1
     
-    mov bl, [r_char]
+    mov bl, [_r_char]
     mov [eax], bl
     inc ecx
 .cond:
@@ -392,26 +391,26 @@ LerInteiro:
     push ebx
     push ecx
 
-    mov eax, r_char
+    mov eax, _r_char
     mov ebx, 1
     call _Scan
 
     pop ecx
     pop ebx
 
-    cmp byte [r_char], 0ah ; \n
+    cmp byte [_r_char], 0ah ; \n
     je .cond
-    cmp byte [r_char], '-'
+    cmp byte [_r_char], '-'
     je .write
-    cmp byte [r_char], '0'
+    cmp byte [_r_char], '0'
     jb .l1
-    cmp byte [r_char], '9'
+    cmp byte [_r_char], '9'
     ja .l1
 .write:
-    mov al, [r_char]
+    mov al, [_r_char]
     mov byte [ebx+ecx], al
     inc ecx
-    cmp ecx, BUFFER_MAX_SIZE
+    cmp ecx, _BUFFER_MAX_SIZE
     jl .l1
 .cond:
     cmp ecx, 0
@@ -449,7 +448,7 @@ EscreverInteiro:
     mov ebp, esp
     mov eax, dword [ebp+36]   ; param1
     mov eax, dword [eax]
-    sub esp, BUFFER_MAX_SIZE*2
+    sub esp, _BUFFER_MAX_SIZE*2
     push eax
     call _IntToString    ; return values on stack, eax - len
     mov esp, eax
@@ -488,34 +487,34 @@ EscreverInteiro:
     mov ebp, 15
 
     ; CHAR ------------------------
-    push buffer
+    push _buffer
     call LerChar
-    mov dword [tmp], eax      ; len
-    push tmp
+    mov dword [_tmp], eax      ; len
+    push _tmp
     call EscreverInteiro
 
-    push buffer
+    push _buffer
     call EscreverChar
 
     ; INT ------------------------
-    push buffer
+    push _buffer
     call LerInteiro
-    mov [tmp], eax
-    push tmp
+    mov [_tmp], eax
+    push _tmp
     call EscreverInteiro
 
-    push buffer
+    push _buffer
     call EscreverInteiro
 
     ; STRING ------------------------
-    push buffer
+    push _buffer
     push 20
     call LerString
-    mov dword [tmp], eax
-    push tmp
+    mov dword [_tmp], eax
+    push _tmp
     call EscreverInteiro
 
-    push buffer
+    push _buffer
     push eax
     call EscreverString
     
