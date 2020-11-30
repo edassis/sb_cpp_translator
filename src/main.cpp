@@ -188,7 +188,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-
-// modularizar codigo (como importar no assembly)
-// testar funções de string, char
-// sub, jmpn, jmp, jmpn, jmpz, s_input, s_output

@@ -1,4 +1,5 @@
 %include "inout.asm"
+
 section .data
 	OITO dd 8
 
@@ -12,10 +13,9 @@ _start:
 	push N+4
 	call LerInteiro
 	mov eax, dword [N+4]
-	cdq
 	mov ebx, dword [OITO]
 	imul ebx
-	jo Overflow
+	jo _Overflow
 	mov dword [N], eax
 	push N+4
 	call EscreverInteiro

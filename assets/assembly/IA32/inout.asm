@@ -41,7 +41,7 @@ section .text
     ; global _start
 
 ; finishes execution
-Overflow:
+_Overflow:
     mov eax, _msg_overflow
     mov ebx, _MSG_OVERFLOW_SIZE
     call _Print
@@ -295,6 +295,7 @@ LerString:
     cmp ebx, 0
     je .l1
 .end:
+    mov byte [eax+ebx], 0h    ; null terminated
     push ebx
     
     push ebx
@@ -521,4 +522,4 @@ EscreverInteiro:
     xor edi, edi
     exit
 
-; -------------------------------------------------
+; ------------------------------------

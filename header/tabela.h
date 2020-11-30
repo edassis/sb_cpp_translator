@@ -176,10 +176,9 @@ const map<string, string> TranslationTable {    // * - operands
     },
     {
         "MULT",
-            "\tcdq\n"
             "\tmov ebx, dword *\n"
             "\timul ebx\n"
-            "\tjo Overflow\n"
+            "\tjo _Overflow\n"
     },
     {
         "DIV",
