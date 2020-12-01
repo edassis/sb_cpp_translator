@@ -8,7 +8,7 @@ OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 # You can also do it like that
 # OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 INCLUDE := -I header/
-TARGET := montador
+TARGET := tradutor
 
 .PHONY: all clean msg
 
@@ -27,4 +27,4 @@ clean:
 	@$(RM) -rv $(OBJ_DIR) $(TARGET)
 
 msg:
-	@echo "> \"./montador\" to execute"
+	@echo "> \"./$(TARGET)\" to execute"

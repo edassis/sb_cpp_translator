@@ -22,7 +22,7 @@ L1:
 	mov dword [NEW_DATA], eax
 	mov ebx, dword [DOIS]
 	imul ebx
-	jo Overflow
+	jo _Overflow
 	mov dword [TMP_DATA], eax
 	mov eax, dword [OLD_DATA]
 	sub eax, dword [TMP_DATA]

@@ -21,6 +21,13 @@ Perform lexical, syntactical and semantic checks following the defined assembly 
     ./montador -o <name>.PRE
 
 
+### Translate
+
+Generate an assembly file in x86 (`.s` file).
+As in Assemble option, makes several check on original file before translation. The output file is capable of be compiled
+with NASM and executed natively.
+    
+    ./montador -x86 <name>.asm
 
 ![Tabela de comandos][1]
 

@@ -86,6 +86,9 @@ int get_arguments(int argc, char **argv, string &option, string &sf) {
 
             ret = 1;
         }
+    } else if (argc == 2) {
+        sf = argv[1];
+        option = "-x86";
     } else {
         cout << "Erro! Passagem invalida de parametros." << endl;
         cout << "> Informe uma opcao: -p, -o, -x86" << endl;
