@@ -1,0 +1,7 @@
+%ifndef inout
+%define inout
+extern LerInteiro, EscreverInteiro
+extern LerChar, EscreverChar
+extern LerString, EscreverString
+extern Overflow
+%endif

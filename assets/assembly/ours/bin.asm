@@ -1,6 +1,8 @@
+E1: EQU 1
 SECTION TEXT
 INPUT OLD_DATA
 LOAD OLD_DATA
+IF E1
 L1: DIV DOIS        ; 3 = OLD_DATA / 2
 STORE  NEW_DATA     ; new_data = 3
 MULT DOIS           ; 6 = 3 * 2 

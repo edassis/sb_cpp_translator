@@ -5,35 +5,38 @@ Aluno:
 
 Informações:
 - O que foi implementado:
-    Implementado montador com CHECAGEM DE ERROS conforme especificado na
-    ementa do trabalho. Rótulos/Instruções/Diretivas com erro são ignoradas.
+    Tradutor do assembly inventado para assembly x86. Ele faz
+    pré-processamento (temp.PRE), onde checa erros.
 
-    "./montador -p <nome>.asm" Gera o arquivo <nome>.PRE sem comentários, 
-    espaços/tabulações desnecessários. 
-    
-        Nessa etapa, o montador checa se dado comando é uma instrução/diretiva
-        válida e trata a diretiva EQU. Confere a construção do token (checagem léxica).
+    -> "./tradutor <nome>.asm" Gera o arquivo <nome>.s traduzido. 
 
-    "./montador -o <nome>.PRE" Gera o arquivo <nome>.OBJ contendo o binário.
+    Foi implementado a biblioteca "inout.asm" de procedimentos em
+    Assembly x86 para fazer as requisições de I/O. Esse arquivo precisa
+    estar junto com o arquivo traduzido na hora da compilação.
 
-        Nessa etapa, o montador procura por todos os tipos de erros. Sempre que
-        possível gera o binário.
+    -> Compilar o assembly:
+
+        $ ./tradutor <file>.asm
+        $ nasm -f elf32 <file>.s
+        $ ld -m elf_i386 <file>.o
 
 
-- Instruções para compilar:
-    Foi criado um Makefile para facilitar processo de compilação.
+- Instruções para compilar o programa:
+    Foi criado um Makefile para facilitar o processo de compilação.
     Bastando executar "make" para gerar todos os arquivos objetos em "obj/"
-    e o executável "montador".
+    e o executável "tradutor".
 
     -> Compilação com o Makefile:
         $ make
     
     -> Compilação manual:
-        $ g++ -std=c++11 -Wall -g -I header/ src/main.cpp src/montador.cpp -o montador
+        $ g++ -std=c++11 -Wall -g -I header/ src/main.cpp src/montador.cpp -o tradutor
 
     -> Executar:
-        $ ./montador
+        $ ./tradutor <nome>.asm
 
 
-- Versão do compilador:
+Versão do software:
     -> g++ (Ubuntu 9.3.0-10ubuntu2) 9.3.0
+    -> NASM version 2.14.02
+    -> GNU ld (GNU Binutils for Ubuntu) 2.34

@@ -1,13 +1,16 @@
 # Files
 *.PRE
 *.OBJ
+*.o
+*.obj
 *.zip
 a.out
 montador
 teste*
+.gdb_history
 
 # Folders
-.vscode/
 bin/
 obj/
 docs/
+enviar/
