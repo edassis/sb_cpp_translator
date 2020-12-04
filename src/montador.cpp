@@ -39,6 +39,17 @@ bool is_number(string &s) {
     return is_number;
 }
 
+map<int, string> _swap_TS(map<string, int> TS) {
+    map<int, string> res;
+    
+    // each key should have only one value
+    for (auto &e : TS) {
+        res[e.second] = e.first;
+    }
+
+    return res;
+}
+
 void _obj_one_line(ostream &out_file, vector<Instruction> &text_table, vector<Directive> &data_table) {
     for (Instruction &instr : text_table) {
         out_file << instr.opcode << ' ';
@@ -77,17 +88,6 @@ void _obj_pretty(ostream &out_file, vector<Instruction> &text_table, vector<Dire
             end_counter += direc.length;
         }
     }
-}
-
-map<int, string> _swap_TS(map<string, int> TS) {
-    map<int, string> res;
-    
-    // each key should have only one value
-    for (auto &e : TS) {
-        res[e.second] = e.first;
-    }
-
-    return res;
 }
 
 void _obj_x86(ostream &out_file, AssemblyTables tables) {
@@ -375,7 +375,13 @@ void pre_process(ifstream &in_file, ofstream &out_file) {
                     } else {
                         out_file << raw_instr.instr_name << ' ';
                     }
-                    for (auto &e : raw_instr.operands) out_file << e << ' ';
+                    for (auto &e : raw_instr.operands) {
+                        if (!is_number(e) && equ_table.count(e) > 0) {
+                            out_file << equ_table.at(e) << ' ';
+                        } else {
+                            out_file << e << ' ';
+                        }
+                    }
                     out_file << '\n';
                 } else if (currentTextState == TextState::Pass) {
                     currentTextState = TextState::Get;
@@ -503,20 +509,25 @@ AssemblyTables generate_tables(ifstream &in_file) {
             }
 
             if (currentMajorState == MajorState::FirstPass) {  // make TS, check labels and directives
+                bool is_valid = false;       // command is valid?            
+                
                 if (currentSection == Section::Text) {
                     if (!label.empty()) {
                         if (TS.count(label) == 0) {
                             TS[label] = end_count;
+                            is_valid = true;
                         } else {
                             cout << "Erro SEMANTICO! Rotulo repetido \"" << label << "\" "
                                  << "(linha " << line_count << ")." << endl;
                         }
+                    } else {
+                        is_valid = true;
                     }
                 } else if (currentSection == Section::Data) {
                     if (!label.empty()) {
                         if (TS.count(label) == 0) {
                             Directive direc;
-                            bool is_valid = true;
+                            // bool is_valid = true;
 
                             if (TD.count(command)) {
                                 direc = TD.at(command);
@@ -545,30 +556,26 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                                 
                                                 direc.operands.emplace_back(defined_param);
                                             }
+                                            is_valid = true;
 
                                         } else {
                                             cout << "Erro SINTATICO! Diretiva \"" << command << "\"  com o tipo de operandos invalido "
                                                  << "(linha " << line_count << ")." << endl;
-
-                                            is_valid = false;
                                         }
                                         
                                     } else {
                                         cout << "Erro SINTATICO! Diretiva \"" << command << "\" com a quantidade de operandos invalida "
                                              << "(linha " << line_count << ")." << endl;    
-
-                                        is_valid = false;
                                     }
                                 } else if (command == "SPACE") {    // SPACE supports 0/1 params
                                     Param defined_param;
                                     defined_param.type = ParamType::Immediate; defined_param.value = 0;
                                     
                                     direc.operands.emplace_back(defined_param);
+                                    is_valid = true;
                                 } else if (TD.at(command).qtd_operands != param.size()) {
                                     cout << "Erro SINTATICO! Diretiva \"" << command << "\" com a quantidade de operandos invalida "
                                          << "(linha " << line_count << ")." << endl;
-                                    
-                                    is_valid = false;
                                 }
 
                                 if (is_valid) {
@@ -591,49 +598,45 @@ AssemblyTables generate_tables(ifstream &in_file) {
                     cout << "Erro SEMANTICO! Diretiva/Instrucao na secao errada \"" << command << "\" "
                          << "(linha " << line_count << ")." << endl;
                 }
+                if (!is_valid) command.clear();
+
             } else if (currentMajorState == MajorState::SecondPass) {  // generate text/data table, check instr's params, check labels on TS
                 if (currentSection == Section::Text) {
+                    bool is_valid = true;   // valid command?
                     if (!command.empty()) {
                         if (TI.count(command) > 0) {
                             Instruction instr = TI.at(command);
                             instr.label = label;
-/////////////////////// NOVIDADE
                             vector<pair<string, int>> inc_param;        // parameters to include (label, imediate)
 
                             // determine if params have increment and put this on s_param vector
                             for (unsigned i = 0; i < param.size(); i++) {
                                 pair<string, int> n_param;      // new parameter
                                 n_param.first = "", n_param.second = 0;
-                                bool valid = true;
                                 if (!is_number(param[i])) { // label
                                     if (i + 2 < param.size() && param[i+1] == "+" && is_number(param[i+2])) {     // increment
                                         n_param.first = param[i];
                                         n_param.second = stoi(param[i+2]);
 
                                         i += 2; // skip next 2
-                                    } else {
-                            
+                                    } else {       
                                         n_param.first = param[i];
                                     }
                                 } else if (command == "S_INPUT" || command == "S_OUTPUT") {       // accepts immediate as parameter
                                     int im = stoi(param[i]);
                                     n_param.second = im;
-                                    /* if (im <= 100) n_param.second = stoi(param[i]);
-                                    else cout << "Erro SINTATICO! Imediato \"" << param[i] << "\" maior que 100"
-                                         << "(linha " << line_count << ")." << endl; */
                                 } else {
                                     cout << "Erro SINTATICO! Parametro invalido \"" << param[i] << "\" "
                                          << "(linha " << line_count << ")." << endl;
-
-                                    valid = false;
+                                    is_valid = false;
+                                    break;
                                 }
 
-                                if (valid) inc_param.emplace_back(n_param);
+                                if (is_valid) inc_param.emplace_back(n_param);
                             }
 
                             if (instr.qtd_operands == inc_param.size()) {
                                 if (instr.qtd_operands > 0) {  // has param
-                                    bool valid_param = true;
                                     for (unsigned i = 0; i < inc_param.size(); i++) {  // check param on TS
                                         Param defined_param;
 
@@ -647,8 +650,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                             } else {
                                                 cout << "Erro SEMANTICO! Rotulo ausente \"" << inc_param[i].first << "\" "
                                                     << "(linha " << line_count << ")." << endl;
-
-                                                valid_param = false;
+                                                is_valid = false;
                                             }
                                         } else {    // imediate
                                             defined_param.type = ParamType::Immediate;
@@ -658,27 +660,31 @@ AssemblyTables generate_tables(ifstream &in_file) {
                                             instr.operands.emplace_back(defined_param);
                                         }
                                     }
+                                    if (is_valid) text_table.push_back(instr);
 
-                                    if (valid_param)
-                                        text_table.push_back(instr);
                                 } else {  // instr without param
                                     text_table.push_back(instr);
                                 }
                             } else {
                                 cout << "Erro SINTATICO! Instrucao \"" << command << "\" com a quantidade de operandos incorreta "
                                      << "(linha " << line_count << ")." << endl;
+                                is_valid = false;
                             }
                         } else if (TD.count(command) > 0) {  // (occurs if command is a directive)
                             cout << "Erro SEMANTICO! Diretiva na secao errada \"" << command << "\" "
                                  << "(linha " << line_count << ")." << endl;
+                            is_valid = false;
                         } else {
                             cout << "Erro SINTATICO! Instrucao invalida \"" << command << "\" "
                                  << "(linha " << line_count << ")." << endl;
+                            is_valid = false;
                         }
                     } else {
                         cout << "Erro SINTATICO! Declaracao ausente "
                              << "(linha " << line_count << ")." << endl;
+                        is_valid = false;
                     }
+                    if (!is_valid) command.clear();
                 }
             }
 
@@ -708,7 +714,7 @@ AssemblyTables generate_tables(ifstream &in_file) {
             end_count = 0;
 
             if (!found_text) {
-                cout << "Erro SEMANTICO! Secao TEXT faltando." << endl;
+                cout << "Erro SINTATICO! Secao TEXT faltando." << endl;
                 cout << "> Compilacao interrompida." << endl;
 
                 fatal_error = true;

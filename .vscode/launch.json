@@ -8,10 +8,10 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/montador",
+            "program": "${workspaceFolder}/tradutor",
             "args": [
-                "-x86",
-                "assets/assembly/ours/bin.asm"
+                "-op",
+                "triangulo.PRE"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
