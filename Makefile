@@ -8,7 +8,7 @@ OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 # You can also do it like that
 # OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 INCLUDE := -I header/
-TARGET := tradutor
+TARGET := montador
 
 .PHONY: all clean msg
 
