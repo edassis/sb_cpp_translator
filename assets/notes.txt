@@ -8,7 +8,7 @@
 - C junto de assembly:
 $ sudo apt install gcc-multilib
 
-$ nasm -f elf_32 arquivo1.asm
+$ nasm -f elf32 arquivo1.asm
 $ gcc -m32 arquivo2.c arquivo1.o
 
 gdb:
