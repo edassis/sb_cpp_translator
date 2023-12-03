@@ -1,4 +1,4 @@
-# SB-Translator
+# SB Translator
 
 A C++ translator for the assembly invented in class.
 
@@ -8,7 +8,7 @@ A C++ translator for the assembly invented in class.
 ### Pre-Process
 
 Remove unnecessary spaces, tabs, comments, and do basic code formatting (`.PRE` file).
-Checks whether a given command is valid.
+Validate specified commands.
     
     ./montador -p <name>.asm
 
@@ -24,12 +24,12 @@ Perform lexical, syntactical and semantic checks following the defined assembly 
 ### Translate
 
 Generate an assembly file in x86 (`.s` file).
-As in Assemble option, makes several check on original file before translation. The output file is capable of be compiled
-with NASM and executed natively.
+As in Assemble option, makes several checks on original file before translation. The output file can be compiled
+with NASM to produce a native executable.
     
     ./montador -x86 <name>.asm
 
-![Tabela de comandos][1]
+![Commands table][1]
 
 
 [1]: assets/images/OPCODE-Table.png
